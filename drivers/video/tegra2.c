@@ -184,7 +184,7 @@ static void update_panel_size(struct fdt_lcd *config)
 void lcd_ctrl_init(void *lcdbase)
 {
 	struct fdt_lcd config;
-	int line_length;
+	int line_length, size;
 
 	/* get panel details */
 	if (fdt_decode_lcd(gd->blob, &config)) {
@@ -200,11 +200,19 @@ void lcd_ctrl_init(void *lcdbase)
 	 */
 	config.frame_buffer = (u32)lcd_base;
 	update_panel_size(&config);
+	size = lcd_get_size(&line_length),
 
 	/* call board specific hw init */
 	init_lcd(&config);
-	mmu_set_region_dcache(config.frame_buffer,
-			lcd_get_size(&line_length), DCACHE_WRITETHROUGH);
+
+	/* For write-through or cache off, change the LCD memory region */
+	if (!(config.cache_type & FDT_LCD_CACHE_WRITE_BACK))
+		mmu_set_region_dcache(config.frame_buffer, size,
+			config.cache_type & FDT_LCD_CACHE_WRITE_THROUGH ?
+				DCACHE_WRITETHROUGH : DCACHE_OFF);
+
+	/* Enable flushing after LCD writes if requested */
+	lcd_set_flush_dcache(config.cache_type & FDT_LCD_CACHE_FLUSH);
 
 	debug("LCD frame buffer at %p\n", lcd_base);
 }

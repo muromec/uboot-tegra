@@ -502,6 +502,8 @@ int fdt_decode_lcd(const void *blob, struct fdt_lcd *config)
 	config->disp = (struct disp_ctlr *)lookup_phandle_reg(blob, node,
 							  "display");
 	config->pixel_clock = get_int(blob, node, "pixel_clock", 0);
+	config->cache_type = get_int(blob, node, "cache-type",
+			FDT_LCD_CACHE_WRITE_BACK_FLUSH);
 	err = get_int_array(blob, node, "horiz_timing", config->horiz_timing,
 			FDT_LCD_TIMING_COUNT);
 	if (!err)

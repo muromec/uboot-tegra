@@ -108,6 +108,15 @@ enum {
 	FDT_LCD_TIMING_COUNT,
 };
 
+enum lcd_cache_t {
+	FDT_LCD_CACHE_OFF		= 0,
+	FDT_LCD_CACHE_WRITE_THROUGH	= 1 << 0,
+	FDT_LCD_CACHE_WRITE_BACK	= 1 << 1,
+	FDT_LCD_CACHE_FLUSH		= 1 << 2,
+	FDT_LCD_CACHE_WRITE_BACK_FLUSH	= FDT_LCD_CACHE_WRITE_BACK |
+						FDT_LCD_CACHE_FLUSH,
+};
+
 /* Information about the LCD */
 struct fdt_lcd {
 	addr_t reg;		/* address of registers in physical memory */
@@ -127,6 +136,7 @@ struct fdt_lcd {
 	unsigned pixel_clock;	/* Pixel clock in Hz */
 	int horiz_timing[FDT_LCD_TIMING_COUNT];	/* Horizontal timing */
 	int vert_timing[FDT_LCD_TIMING_COUNT];	/* Vertical timing */
+	enum lcd_cache_t cache_type;
 };
 
 /* Parameters we need for USB */
@@ -195,6 +205,7 @@ struct fdt_kbc {
  *	enabled (default 1)
  *	interrupts (returns first in interrupt list, -1 if none)
  *	silent (default 0)
+ *	cache-type (default FDT_LCD_CACHE_WRITE_BACK_FLUSH)
  *
  * The divisor calculation is performed by calling
  * fdt_decode_uart_calc_divisor() automatically once the information is
