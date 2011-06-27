@@ -11,10 +11,17 @@
 
 enum KEYS { KEY_FN = 222, KEY_SHIFT = 223};
 
+enum {
+	KBC_MAX_ROW	= 16,
+	KBC_MAX_COL	= 8,
+	KBC_KEY_COUNT	= KBC_MAX_ROW * KBC_MAX_COL,
+};
+
 struct tegra_keyboard_config {
-	int *plain_keycode; /* keycode when Shift or FN are not pressed */
-	int *shift_keycode; /* keycode when Shift modifier key is pressed */
-	int *function_keycode; /* keycode when Fn modifier key is pressed */
+	/* keycode tables, one for each row/col position */
+	int plain_keycode[KBC_KEY_COUNT]; /* when no Shift or Fn */
+	int shift_keycode[KBC_KEY_COUNT]; /* Shift modifier key is pressed */
+	int fn_keycode[KBC_KEY_COUNT]; /* Fn modifier key is pressed */
 };
 
 struct kbc_tegra {

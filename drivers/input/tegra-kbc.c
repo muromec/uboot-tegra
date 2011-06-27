@@ -28,13 +28,16 @@
 #include <asm/arch/clock.h>
 #include <asm/arch/pinmux.h>
 #include <tegra-kbc.h>
+#include <fdt_decode.h>
+
+DECLARE_GLOBAL_DATA_PTR;
 
 #define DEVNAME "tegra-kbc"
 
-#define KBC_MAX_GPIO	24
-#define KBC_MAX_KPENT	8
-#define KBC_MAX_ROW	16
-#define KBC_MAX_COL	8
+enum {
+	KBC_MAX_GPIO	= 24,
+	KBC_MAX_KPENT	= 8,
+};
 
 #define KBC_MAX_KEY	(KBC_MAX_ROW * KBC_MAX_COL)
 
@@ -60,9 +63,15 @@
 /* kbc globals */
 unsigned int kbc_repoll_time;
 int kbc_last_keypress;
-int *kbc_plain_keycode;
-int *kbc_fn_keycode;
-int *kbc_shift_keycode;
+
+/* These are key maps for each modifier: each has KBC_KEY_COUNT entries */
+u8 *kbc_plain_keycode;
+u8 *kbc_fn_keycode;
+u8 *kbc_shift_keycode;
+
+#ifdef CONFIG_OF_CONTROL
+struct fdt_kbc config;	/* Our keyboard config */
+#endif
 
 static int tegra_kbc_keycode(int r, int c, int modifier)
 {
@@ -396,6 +405,25 @@ int drv_keyboard_init(void)
 	struct stdio_dev kbddev;
 	char *stdinname;
 
+#ifdef CONFIG_OF_CONTROL
+	int	node;
+
+	node = fdt_decode_next_compatible(gd->blob, 0,
+					  COMPAT_NVIDIA_TEGRA250_KBC);
+	if (node < 0)
+		return node;
+	if (fdt_decode_kbc(gd->blob, node, &config))
+		return -1;
+	assert(FDT_KBC_KEY_COUNT == KBC_KEY_COUNT);
+	kbc_plain_keycode = config.plain_keycode;
+	kbc_shift_keycode = config.shift_keycode;
+	kbc_fn_keycode    = config.fn_keycode;
+#else
+	kbc_plain_keycode = board_keyboard_config.plain_keycode;
+	kbc_shift_keycode = board_keyboard_config.shift_keycode;
+	kbc_fn_keycode    = board_keyboard_config.fn_keycode;
+#endif
+
 	config_kbc_pinmux();
 
 	/*
@@ -404,10 +432,6 @@ int drv_keyboard_init(void)
 	 * changes.
 	 */
 	clock_enable(PERIPH_ID_KBC);
-
-	kbc_plain_keycode = board_keyboard_config.plain_keycode;
-	kbc_shift_keycode = board_keyboard_config.shift_keycode;
-	kbc_fn_keycode    = board_keyboard_config.function_keycode;
 
 	stdinname = getenv("stdin");
 	memset(&kbddev, 0, sizeof(kbddev));
