@@ -99,6 +99,9 @@ static void lcd_setbgcolor (int color);
 
 char lcd_is_enabled = 0;
 
+static char lcd_flush_dcache;	/* 1 to flush dcache after each lcd update */
+
+
 #ifdef	NOT_USED_SO_FAR
 static void lcd_getcolreg (ushort regno,
 				ushort *red, ushort *green, ushort *blue);
@@ -106,6 +109,21 @@ static int lcd_getfgcolor (void);
 #endif	/* NOT_USED_SO_FAR */
 
 /************************************************************************/
+
+/* Flush LCD activity to the caches */
+void lcd_sync(void)
+{
+	int line_length;
+
+	if (lcd_flush_dcache)
+		flush_dcache_range((u32)lcd_base,
+			(u32)(lcd_base + lcd_get_size(&line_length)));
+}
+
+void lcd_set_flush_dcache(int flush)
+{
+	lcd_flush_dcache = flush != 0;
+}
 
 /*----------------------------------------------------------------------*/
 
@@ -116,6 +134,7 @@ static void console_scrollup (void)
 
 	/* Clear the last one */
 	memset (CONSOLE_ROW_LAST, COLOR_MASK(lcd_color_bg), CONSOLE_ROW_SIZE);
+	lcd_sync();
 }
 
 /*----------------------------------------------------------------------*/
@@ -200,6 +219,7 @@ void lcd_puts (const char *s)
 	while (*s) {
 		lcd_putc (*s++);
 	}
+	lcd_sync();
 }
 
 /*----------------------------------------------------------------------*/
@@ -409,6 +429,7 @@ int lcd_clear (void)
 
 	console_col = 0;
 	console_row = 0;
+	lcd_sync();
 
 	return (0);
 }
@@ -616,6 +637,7 @@ void bitmap_plot (int x, int y)
 	}
 
 	WATCHDOG_RESET();
+	lcd_sync();
 }
 #endif /* CONFIG_LCD_LOGO */
 
@@ -961,6 +983,7 @@ int lcd_display_bitmap(ulong bmp_image, int x, int y)
 		break;
 	};
 
+	lcd_sync();
 	return (0);
 }
 
