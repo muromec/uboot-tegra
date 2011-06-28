@@ -590,5 +590,8 @@ int fdt_decode_kbc(const void *blob, int node, struct fdt_kbc *config)
 	if (!err)
 		err = get_byte_array(blob, node, "keycode-fn",
 				config->fn_keycode, FDT_KBC_KEY_COUNT);
+	if (!err)
+		err = get_byte_array(blob, node, "keycode-ctrl",
+				config->ctrl_keycode, FDT_KBC_KEY_COUNT);
 	return err;
 }

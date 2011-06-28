@@ -68,6 +68,7 @@ int kbc_last_keypress;
 u8 *kbc_plain_keycode;
 u8 *kbc_fn_keycode;
 u8 *kbc_shift_keycode;
+u8 *kbc_ctrl_keycode;
 
 #ifdef CONFIG_OF_CONTROL
 struct fdt_kbc config;	/* Our keyboard config */
@@ -75,12 +76,19 @@ struct fdt_kbc config;	/* Our keyboard config */
 
 static int tegra_kbc_keycode(int r, int c, int modifier)
 {
+	int entry = r * KBC_MAX_COL + c;
+
 	if (modifier == KEY_FN)
-		return kbc_fn_keycode[(r * KBC_MAX_COL) + c];
+		return kbc_fn_keycode[entry];
+
+	/* Put ctrl keys ahead of shift */
+	else if ((modifier == KEY_LEFT_CTRL || modifier == KEY_RIGHT_CTRL)
+			&& kbc_ctrl_keycode)
+		return kbc_ctrl_keycode[entry];
 	else if (modifier == KEY_SHIFT)
-		return kbc_shift_keycode[(r * KBC_MAX_COL) + c];
+		return kbc_shift_keycode[entry];
 	else
-		return kbc_plain_keycode[(r * KBC_MAX_COL) + c];
+		return kbc_plain_keycode[entry];
 }
 
 /* determines if current keypress configuration can cause key ghosting */
@@ -139,7 +147,7 @@ static int tegra_kbc_find_keys(int *fifo)
 	}
 	for (i = 0; i < valid; i++) {
 		k = tegra_kbc_keycode(rows_val[i], cols_val[i], 0);
-		if ((k == KEY_FN) || (k == KEY_SHIFT)) {
+		if (KEY_IS_MODIFIER(k)) {
 			modifier = k;
 			break;
 		}
@@ -418,6 +426,7 @@ int drv_keyboard_init(void)
 	kbc_plain_keycode = config.plain_keycode;
 	kbc_shift_keycode = config.shift_keycode;
 	kbc_fn_keycode    = config.fn_keycode;
+	kbc_ctrl_keycode  = config.ctrl_keycode;
 #else
 	kbc_plain_keycode = board_keyboard_config.plain_keycode;
 	kbc_shift_keycode = board_keyboard_config.shift_keycode;
