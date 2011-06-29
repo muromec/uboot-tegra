@@ -15,18 +15,11 @@
 #define CONFIG_CHROMEOS_KERNEL_LOADADDR	0x00100000
 #define CONFIG_CHROMEOS_KERNEL_BUFSIZE	0x00800000
 
-/* default hwid for seaboard */
-#define CONFIG_CHROMEOS_HWID		"ARM SEABOARD TEST 1176"
-
 /* graphics display */
 #define CONFIG_CHROMEOS_BMPBLK
 #define CONFIG_LCD_BMP_RLE8
 #define CONFIG_LZMA
 #define CONFIG_SPLASH_SCREEN
-
-/* lcd dimension; this is used when packing stuff in chromeos-bootimage */
-#define CONFIG_LCD_vl_col		1366
-#define CONFIG_LCD_vl_row		768
 
 /* TODO hard-coded mmc device number here */
 #define DEVICE_TYPE			"mmc"
