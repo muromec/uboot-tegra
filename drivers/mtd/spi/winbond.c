@@ -117,7 +117,7 @@ static int winbond_wait_ready(struct spi_flash *flash, unsigned long timeout)
 
 	ret = spi_xfer(spi, 32, &cmd[0], NULL, SPI_XFER_BEGIN);
 	if (ret) {
-		debug("SF: Failed to send command %02x: %d\n", cmd, ret);
+		debug("SF: Failed to send command %02x: %d\n", cmd[0], ret);
 		return ret;
 	}
 
@@ -125,7 +125,8 @@ static int winbond_wait_ready(struct spi_flash *flash, unsigned long timeout)
 	do {
 		ret = spi_xfer(spi, 8, NULL, &status, 0);
 		if (ret) {
-			debug("SF: Failed to get status for cmd %02x: %d\n", cmd, ret);
+			debug("SF: Failed to get status for cmd %02x: %d\n",
+				cmd[0], ret);
 			return -1;
 		}
 
@@ -139,7 +140,7 @@ static int winbond_wait_ready(struct spi_flash *flash, unsigned long timeout)
 	if ((status & WINBOND_SR_WIP) == 0)
 		return 0;
 
-	debug("SF: Timed out on command %02x: %d\n", cmd, ret);
+	debug("SF: Timed out on command %02x: %d\n", cmd[0], ret);
 	/* Timed out */
 	return -1;
 }
@@ -305,7 +306,7 @@ int winbond_erase(struct spi_flash *flash, u32 offset, size_t len)
 		}
 	}
 
-	debug("SF: Winbond: Successfully erased %u bytes @ 0x%x\n",
+	debug("SF: Winbond: Successfully erased %lu bytes @ 0x%x\n",
 			len * sector_size, offset);
 	ret = 0;
 
