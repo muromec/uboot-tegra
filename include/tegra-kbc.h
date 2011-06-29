@@ -27,10 +27,10 @@ enum {
 
 struct tegra_keyboard_config {
 	/* keycode tables, one for each row/col position */
-	int plain_keycode[KBC_KEY_COUNT]; /* when no Shift or Fn */
-	int shift_keycode[KBC_KEY_COUNT]; /* Shift modifier key is pressed */
-	int fn_keycode[KBC_KEY_COUNT]; /* Fn modifier key is pressed */
-	int ctrl_keycode[KBC_KEY_COUNT]; /* Ctrl modifier key is pressed */
+	u8 plain_keycode[KBC_KEY_COUNT]; /* when no Shift or Fn */
+	u8 shift_keycode[KBC_KEY_COUNT]; /* Shift modifier key is pressed */
+	u8 fn_keycode[KBC_KEY_COUNT]; /* Fn modifier key is pressed */
+	u8 ctrl_keycode[KBC_KEY_COUNT]; /* Ctrl modifier key is pressed */
 };
 
 struct kbc_tegra {

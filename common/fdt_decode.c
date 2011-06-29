@@ -584,13 +584,16 @@ int fdt_decode_kbc(const void *blob, int node, struct fdt_kbc *config)
 {
 	int err;
 
+	memset(config, '\0', sizeof(*config));
 	err = get_byte_array(blob, node, "keycode-plain",
 			config->plain_keycode, FDT_KBC_KEY_COUNT);
 	if (!err)
 		err = get_byte_array(blob, node, "keycode-shift",
 				config->shift_keycode, FDT_KBC_KEY_COUNT);
+
+	/* Some keyboards don't have a Fn key */
 	if (!err)
-		err = get_byte_array(blob, node, "keycode-fn",
+		get_byte_array(blob, node, "keycode-fn",
 				config->fn_keycode, FDT_KBC_KEY_COUNT);
 	if (!err)
 		err = get_byte_array(blob, node, "keycode-ctrl",
