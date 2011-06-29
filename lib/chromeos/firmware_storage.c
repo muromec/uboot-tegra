@@ -81,3 +81,13 @@ int firmware_storage_write(firmware_storage_t *file,
 
 	return 0;
 }
+
+int firmware_storage_close(firmware_storage_t *file)
+{
+        if (file->close(file->context) < 0) {
+                VBDEBUG(PREFIX "failed to close firmware\n");
+                return -1;
+        }
+
+        return 0;
+}

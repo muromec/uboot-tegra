@@ -61,4 +61,12 @@ int firmware_storage_read(firmware_storage_t *file,
 int firmware_storage_write(firmware_storage_t *file,
 		const off_t offset, const size_t count, const void *buf);
 
+/**
+ * This close SPI flash device
+ *
+ * @param file - the closed SPI flash device
+ * @return 0 if it succeeds, non-zero if it fails
+ */
+int firmware_storage_close(firmware_storage_t *file);
+
 #endif /* CHROMEOS_FIRMWARE_STORAGE_H_ */

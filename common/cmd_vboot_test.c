@@ -66,6 +66,8 @@ static int do_vboot_test_fwrw(cmd_tbl_t *cmdtp,
 	firmware_storage_write(&file, TEST_FW_START, TEST_FW_LENGTH,
 			original_buf);
 
+	firmware_storage_close(&file);
+
 	if (ret == 0)
 		VbExDebug("Read and write firmware test SUCCESS.\n");
 

@@ -356,6 +356,10 @@ static uint8_t *read_gbb_from_firmware(void)
 		gbb_buf = NULL;
 	}
 
+	if (firmware_storage_close(&file)) {
+		VbExDebug("Failed to close firmware device!\n");
+	}
+
 	return gbb_buf;
 }
 
