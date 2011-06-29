@@ -19,7 +19,7 @@
 #define VBOOT_FIRMWARE_CACHE_H_
 
 #include <linux/types.h>
-#include <vboot/firmware_storage.h>
+#include <chromeos/firmware_storage.h>
 
 typedef struct {
 	/*

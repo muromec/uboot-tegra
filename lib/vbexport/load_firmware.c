@@ -9,8 +9,8 @@
  */
 
 #include <common.h>
+#include <chromeos/firmware_storage.h>
 #include <vboot/firmware_cache.h>
-#include <vboot/firmware_storage.h>
 
 /* Import the header files from vboot_reference. */
 #include <vboot_api.h>

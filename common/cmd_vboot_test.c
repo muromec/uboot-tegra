@@ -14,7 +14,7 @@
 
 #include <common.h>
 #include <command.h>
-#include <vboot/firmware_storage.h>
+#include <chromeos/firmware_storage.h>
 #include <vboot_api.h>
 
 /* We test the regions of GBB. */

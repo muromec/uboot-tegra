@@ -17,7 +17,7 @@
 #include <common.h>
 #include <command.h>
 #include <gbb_header.h>
-#include <vboot/firmware_storage.h>
+#include <chromeos/firmware_storage.h>
 #include <vboot_api.h>
 
 #define TEST_LBA_START	0
