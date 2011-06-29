@@ -18,6 +18,8 @@
 #include <command.h>
 #include <gbb_header.h>
 #include <chromeos/firmware_storage.h>
+#include <vboot/global_data.h>
+
 #include <vboot_api.h>
 
 #define TEST_LBA_START	0
@@ -339,8 +341,10 @@ static int show_screen_and_delay(uint32_t screen_type)
 
 static uint8_t *read_gbb_from_firmware(void)
 {
+	vb_global_t *global;
 	firmware_storage_t file;
-	uint8_t *gbb_buf;
+
+	global = get_vboot_global();
 
 	/* Open firmware storage device. */
 	if (firmware_storage_open_spi(&file)) {
@@ -348,19 +352,16 @@ static uint8_t *read_gbb_from_firmware(void)
 		return NULL;
 	}
 
-	gbb_buf = VbExMalloc(CONFIG_LENGTH_GBB);
-	if (firmware_storage_read(&file, CONFIG_OFFSET_GBB, CONFIG_LENGTH_GBB,
-			gbb_buf)) {
-		VbExDebug("Failed to read firmware!\n");
-		VbExFree(gbb_buf);
-		gbb_buf = NULL;
+	if (init_vboot_global(global, &file)) {
+		VbExDebug("Failed to init vboot global data!\n");
+		return NULL;
 	}
 
 	if (firmware_storage_close(&file)) {
 		VbExDebug("Failed to close firmware device!\n");
 	}
 
-	return gbb_buf;
+	return global->gbb_data;
 }
 
 static int show_images_and_delay(BmpBlockHeader *bmph, int index)
@@ -426,7 +427,6 @@ static int do_vbexport_test_display(
 	} else {
 		ret = 1;
 	}
-	VbExFree(gbbh);
 
 	VbExDebug("Showing debug info...\n");
 	ret |= VbExDisplayDebugInfo("Hello!\n"

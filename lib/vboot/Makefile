@@ -13,6 +13,7 @@ include $(TOPDIR)/config.mk
 LIB	= $(obj)libvboot.a
 
 COBJS-$(CONFIG_VBOOT_WRAPPER) += firmware_cache.o
+COBJS-$(CONFIG_VBOOT_WRAPPER) += global_data.o
 
 COBJS	:= $(COBJS-y)
 OBJS	:= $(addprefix $(obj),$(COBJS))
