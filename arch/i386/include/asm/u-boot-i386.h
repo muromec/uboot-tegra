@@ -56,7 +56,9 @@ u32 isa_map_rom(u32 bus_addr, int size);
 #if !defined CONFIG_NO_REALMODE_CODE
 int video_bios_init(void);
 #endif
+#if defined CONFIG_VGA_CONSOLE
 int video_init(void);
+#endif
 
 
 #endif	/* _U_BOOT_I386_H_ */

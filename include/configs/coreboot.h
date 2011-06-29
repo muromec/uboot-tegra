@@ -53,6 +53,7 @@
  */
 #define CONFIG_RTC_MC146818
 #define CONFIG_SYS_ISA_IO_BASE_ADDRESS	0
+#define CONFIG_SYS_ISA_IO	CONFIG_SYS_ISA_IO_BASE_ADDRESS
 
 /*-----------------------------------------------------------------------
  * Serial Configuration
@@ -95,8 +96,12 @@
 /*-----------------------------------------------------------------------
  * Video Configuration
  */
-#undef CONFIG_VIDEO
-#undef CONFIG_CFB_CONSOLE
+#define CONFIG_VIDEO
+#define CONFIG_VIDEO_COREBOOT
+#define CONFIG_VIDEO_SW_CURSOR
+#define VIDEO_FB_16BPP_WORD_SWAP
+#define CONFIG_I8042_KBD
+#define CONFIG_CFB_CONSOLE
 
 /*-----------------------------------------------------------------------
  * Command line configuration.

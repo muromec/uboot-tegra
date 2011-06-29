@@ -39,8 +39,8 @@ COBJS-$(CONFIG_PCI) += pci.o
 COBJS-$(CONFIG_PCI) += pci_type1.o
 COBJS-y	+= realmode.o
 COBJS-y	+= timer.o
-COBJS-y	+= video_bios.o
-COBJS-y	+= video.o
+COBJS-$(CONFIG_VGA_CONSOLE)	+= video_bios.o
+COBJS-$(CONFIG_VGA_CONSOLE)	+= video.o
 COBJS-y	+= zimage.o
 
 SRCS	:= $(SOBJS-y:.o=.S) $(COBJS-y:.o=.c)
