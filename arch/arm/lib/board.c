@@ -274,6 +274,8 @@ void board_init_f (ulong bootflag)
 	init_fnc_t **init_fnc_ptr;
 	gd_t *id;
 	ulong addr, addr_sp;
+	void *new_fdt = NULL;
+	size_t fdt_size = 0;
 #ifdef CONFIG_OF_EMBED
 	extern u8 _binary_dt_dtb_start[];
 #endif
@@ -414,6 +416,22 @@ void board_init_f (ulong bootflag)
 	debug ("Reserving %zu Bytes for Global Data at: %08lx\n",
 			sizeof (gd_t), addr_sp);
 
+#ifdef CONFIG_OF_SEPARATE
+	/*
+	 * If the device tree is sitting immediate above our image then we
+	 * must relocate it. If it is embedded in the data section, then it
+	 * will be relocated with other data.
+	 */
+	if (gd->blob) {
+		fdt_size = ALIGN(fdt_totalsize(gd->blob) + 0x1000, 32);
+
+		addr_sp -= fdt_size;
+		new_fdt = (void *)addr_sp;
+		debug ("Reserving %zu Bytes for FDT at: %08lx\n",
+				fdt_size, addr_sp);
+	}
+#endif
+
 	/* setup stackpointer for exeptions */
 	gd->irq_sp = addr_sp;
 #ifdef CONFIG_USE_IRQ
@@ -445,11 +463,16 @@ void board_init_f (ulong bootflag)
 
 #ifdef CONFIG_SYS_SKIP_ARM_RELOCATION
 	addr = _TEXT_BASE;
+	debug("Code relocation disabled by CONFIG_SYS_SKIP_ARM_RELOCATION\n");
 #endif
 	gd->relocaddr = addr;
 	gd->start_addr_sp = addr_sp;
 	gd->reloc_off = addr - _TEXT_BASE;
 	debug ("relocation Offset is: %08lx\n", gd->reloc_off);
+	if (new_fdt) {
+		memcpy(new_fdt, gd->blob, fdt_size);
+		gd->blob = new_fdt;
+	}
 	memcpy (id, (void *)gd, sizeof (gd_t));
 
 	relocate_code (addr_sp, id, addr);
