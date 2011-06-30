@@ -20,32 +20,6 @@
 
 #define PREFIX "kernel_shared_data: "
 
-enum {
-	CHSW_RECOVERY_BUTTON_PRESSED	= 0x002,
-	CHSW_DEVELOPER_MODE_ENABLED	= 0x020,
-	CHSW_WRITE_PROTECT_DISABLED	= 0x200
-};
-
-/* the data blob format */
-typedef struct {
-	uint32_t	total_size;
-	uint8_t		signature[10];
-	uint16_t	version;
-	uint64_t	nvcxt_lba;
-	uint16_t	vbnv[2];
-	uint8_t		nvcxt_cache[VBNV_BLOCK_SIZE];
-	uint8_t		write_protect_sw;
-	uint8_t		recovery_sw;
-	uint8_t		developer_sw;
-	uint8_t		binf[5];
-	uint32_t	chsw;
-	uint8_t		hwid[ID_LEN];
-	uint8_t		fwid[ID_LEN];
-	uint8_t		frid[ID_LEN];
-	uint32_t	fmap_base;
-	uint8_t		shared_data_body[CONFIG_LENGTH_FMAP];
-} __attribute__((packed)) KernelSharedDataType;
-
 /* TODO remove this function when we embedded the blob in fdt */
 void *get_last_1mb_of_ram(void)
 {
@@ -55,9 +29,7 @@ void *get_last_1mb_of_ram(void)
 }
 
 int cros_ksd_init(void *kernel_shared_data, uint8_t *frid,
-		void *fmap_data, uint32_t fmap_size,
-		void *gbb_data, uint32_t gbb_size,
-		VbNvContext *nvcxt,
+		uint32_t fmap_data, void *gbb_data, VbNvContext *nvcxt,
 		int write_protect_sw, int recovery_sw, int developer_sw)
 {
 	KernelSharedDataType *sd = (KernelSharedDataType *)kernel_shared_data;
@@ -66,6 +38,8 @@ int cros_ksd_init(void *kernel_shared_data, uint8_t *frid,
 	VBDEBUG(PREFIX "kernel shared data at %p\n", sd);
 
 	memset(sd, '\0', sizeof(*sd));
+
+	sd->total_size = sizeof(*sd);
 
 	strcpy((char *)sd->signature, "CHROMEOS");
 	sd->version = SHARED_MEM_VERSION;
@@ -94,10 +68,7 @@ int cros_ksd_init(void *kernel_shared_data, uint8_t *frid,
 	sd->vbnv[0] = 0;
 	sd->vbnv[1] = VBNV_BLOCK_SIZE;
 
-	memcpy(sd->shared_data_body, fmap_data, fmap_size);
-	sd->fmap_base = (uint32_t)sd->shared_data_body;
-
-	sd->total_size = sizeof(*sd);
+	sd->fmap_base = fmap_data;
 
 	sd->nvcxt_lba = NVCONTEXT_LBA;
 

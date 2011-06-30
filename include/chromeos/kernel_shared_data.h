@@ -12,6 +12,7 @@
 #define __CHROMEOS_KERNEL_SHARED_DATA_H__
 
 #include <vboot_nvstorage.h>
+#include <vboot_struct.h>
 
 #define ID_LEN		256
 
@@ -22,6 +23,32 @@
 #define RECOVERY_TYPE		0
 #define NORMAL_TYPE		1
 #define DEVELOPER_TYPE		2
+
+enum {
+	CHSW_RECOVERY_BUTTON_PRESSED	= 0x002,
+	CHSW_DEVELOPER_MODE_ENABLED	= 0x020,
+	CHSW_WRITE_PROTECT_DISABLED	= 0x200
+};
+
+/* the data blob format */
+typedef struct {
+	uint32_t	total_size;
+	uint8_t		signature[10];
+	uint16_t	version;
+	uint64_t	nvcxt_lba;
+	uint16_t	vbnv[2];
+	uint8_t		nvcxt_cache[VBNV_BLOCK_SIZE];
+	uint8_t		write_protect_sw;
+	uint8_t		recovery_sw;
+	uint8_t		developer_sw;
+	uint8_t		binf[5];
+	uint32_t	chsw;
+	uint8_t		hwid[ID_LEN];
+	uint8_t		fwid[ID_LEN];
+	uint8_t		frid[ID_LEN];
+	uint32_t	fmap_base;
+	uint8_t		shared_data_body[VB_SHARED_DATA_REC_SIZE];
+} __attribute__((packed)) KernelSharedDataType;
 
 /**
  * This returns the pointer the last 1MB space of RAM. It is where the data blob
@@ -41,10 +68,8 @@ void *get_last_1mb_of_ram(void);
  *
  * @param kernel_shared_data is the data blob that firmware shares with kernel
  * @param frid r/o firmware id; a zero-terminated string shorter than ID_LEN
- * @param fmap_data points to fmap blob
- * @param fmap_size is the size of the fmap blob
+ * @param fmap_data is the address of fmap in firmware
  * @param gbb_data points to gbb blob
- * @param gbb_size is the size of the gbb blob
  * @param nvcxt points to a VbNvContext object
  * @param write_protect_sw stores the value of write protect gpio
  * @param recovery_sw stores the value of recovery mode gpio
@@ -52,9 +77,7 @@ void *get_last_1mb_of_ram(void);
  * @return 0 if it succeeds; non-zero if it fails
  */
 int cros_ksd_init(void *kernel_shared_data, uint8_t *frid,
-		void *fmap_data, uint32_t fmap_size,
-		void *gbb_data, uint32_t gbb_size,
-		VbNvContext *nvcxt,
+		uint32_t fmap_data, void *gbb_data, VbNvContext *nvcxt,
 		int write_protect_sw, int recovery_sw, int developer_sw);
 
 /**

@@ -112,7 +112,7 @@ static uint32_t init_internal_state_nvcontext(VbNvContext *nvcxt,
  */
 static uint32_t init_internal_state_bottom_half(void *ksd, int *dev_mode)
 {
-	uint8_t frid[ID_LEN], fmap[CONFIG_LENGTH_FMAP];
+	uint8_t frid[ID_LEN];
 	int write_protect_sw, recovery_sw, developer_sw;
 
 	/* fetch gpios at once */
@@ -134,15 +134,8 @@ static uint32_t init_internal_state_bottom_half(void *ksd, int *dev_mode)
 		return VBNV_RECOVERY_RO_SHARED_DATA;
 	}
 
-	if (firmware_storage_read(&_state.file,
-				CONFIG_OFFSET_FMAP, CONFIG_LENGTH_FMAP, fmap)) {
-		VBDEBUG(PREFIX "read fmap fail\n");
-		return VBNV_RECOVERY_RO_SHARED_DATA;
-	}
-
-	if (cros_ksd_init(ksd, frid, fmap, CONFIG_LENGTH_FMAP,
-				_state.gbb_data, CONFIG_LENGTH_GBB,
-				&_state.nvcxt,
+	if (cros_ksd_init(ksd, frid, CONFIG_OFFSET_FMAP,
+				_state.gbb_data, &_state.nvcxt,
 				write_protect_sw, recovery_sw, developer_sw)) {
 		VBDEBUG(PREFIX "init kernel shared data fail\n");
 		return VBNV_RECOVERY_RO_UNSPECIFIED;
@@ -160,6 +153,7 @@ static uint32_t init_internal_state_bottom_half(void *ksd, int *dev_mode)
 static uint32_t init_internal_state(void *ksd, int *dev_mode)
 {
 	uint32_t reason;
+	KernelSharedDataType *ksd_content = ksd;
 
 	*dev_mode = 0;
 
@@ -168,7 +162,7 @@ static uint32_t init_internal_state(void *ksd, int *dev_mode)
 
 	/* malloc spaces for buffers */
 	_state.gbb_data = malloc(CONFIG_LENGTH_GBB);
-	_state.shared = malloc(VB_SHARED_DATA_REC_SIZE);
+	_state.shared = (VbSharedDataHeader *)ksd_content->shared_data_body;
 	_state.key_block = (VbKeyBlockHeader *)malloc(CONFIG_LENGTH_VBLOCK_A);
 	if (!_state.gbb_data || !_state.shared || !_state.key_block)
 		return VBNV_RECOVERY_RO_UNSPECIFIED;
