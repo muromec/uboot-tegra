@@ -10,6 +10,9 @@
 #include <configs/chromeos_seaboard_common.h>
 
 #define CONFIG_VBOOT_WRAPPER
+
+#define CONFIG_CMD_VBOOT_BOOTSTUB
+
 #define CONFIG_CMD_VBEXPORT_TEST
 #define CONFIG_CMD_VBOOT_TEST
 
