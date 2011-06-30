@@ -60,64 +60,6 @@
 #define CONFIG_TEGRA2_USB1_HOST
 #define CONFIG_MACH_TYPE	MACH_TYPE_SEABOARD
 
-#endif /* CONFIG_OF_CONTROL not defined ^^^^^^^ */
-
-#define CONFIG_TEGRA2_KEYBOARD
-#define CONFIG_KEYBOARD
-
-#define CONFIG_CONSOLE_MUX
-#define CONFIG_SYS_CONSOLE_IS_IN_ENV
-#define CONFIG_STD_DEVICES_SETTINGS	"stdin=serial,tegra-kbc\0" \
-					"stdout=serial,lcd\0" \
-					"stderr=serial,lcd\0"
-
-#define CONFIG_SYS_BOARD_ODMDATA	0x300d8011 /* lp1, 1GB */
-
-/* GPIO */
-#define CONFIG_TEGRA2_GPIO
-#define CONFIG_CMD_TEGRA2_GPIO_INFO
-
-/* SPI */
-#define CONFIG_TEGRA2_SPI
-#define CONFIG_SPI_FLASH
-#define CONFIG_SPI_FLASH_WINBOND
-#define CONFIG_SF_DEFAULT_MODE		SPI_MODE_0
-#define CONFIG_CMD_SPI
-#define CONFIG_CMD_SF
-
-/* I2C */
-#define CONFIG_TEGRA2_I2C
-#define CONFIG_SYS_I2C_INIT_BOARD
-#define CONFIG_I2C_MULTI_BUS
-#define CONFIG_SYS_MAX_I2C_BUS		4
-#define CONFIG_SYS_I2C_SPEED		100000
-#define CONFIG_CMD_I2C
-
-/* pin-mux settings for seaboard */
-#define CONFIG_I2CP_PIN_MUX		1
-#define CONFIG_I2C1_PIN_MUX		1
-#define CONFIG_I2C2_PIN_MUX		2
-#define CONFIG_I2C3_PIN_MUX		1
-
-/* SD/MMC */
-#define CONFIG_MMC
-#define CONFIG_GENERIC_MMC
-#define CONFIG_TEGRA2_MMC
-#define CONFIG_CMD_MMC
-
-#define CONFIG_DOS_PARTITION
-#define CONFIG_EFI_PARTITION
-#define CONFIG_CMD_EXT2
-#define CONFIG_CMD_FAT
-
-#define TEGRA2_MMC_DEFAULT_DEVICE	"0"
-
-/* Environment in SPI */
-#define CONFIG_ENV_IS_IN_SPI_FLASH
-
-#define CONFIG_ENV_SECT_SIZE    CONFIG_ENV_SIZE
-#define CONFIG_ENV_OFFSET       (SZ_4M - CONFIG_ENV_SECT_SIZE)
-
 /* Keyboard scan matrix configuration */
 #define CONFIG_TEGRA2_KBC_PLAIN_KEYCODES {			\
 	  0,    0,  'w',  's',  'a',  'z',    0,    KEY_FN,	\
@@ -175,6 +117,64 @@
 	  0,     0,    0,    0,    0,    0,    0,    0,		\
 	  0,     0,    0,    0,  '?',    0,    0,    0		\
 }
+
+#endif /* CONFIG_OF_CONTROL not defined ^^^^^^^ */
+
+#define CONFIG_TEGRA2_KEYBOARD
+#define CONFIG_KEYBOARD
+
+#define CONFIG_CONSOLE_MUX
+#define CONFIG_SYS_CONSOLE_IS_IN_ENV
+#define CONFIG_STD_DEVICES_SETTINGS	"stdin=serial,tegra-kbc\0" \
+					"stdout=serial,lcd\0" \
+					"stderr=serial,lcd\0"
+
+#define CONFIG_SYS_BOARD_ODMDATA	0x300d8011 /* lp1, 1GB */
+
+/* GPIO */
+#define CONFIG_TEGRA2_GPIO
+#define CONFIG_CMD_TEGRA2_GPIO_INFO
+
+/* SPI */
+#define CONFIG_TEGRA2_SPI
+#define CONFIG_SPI_FLASH
+#define CONFIG_SPI_FLASH_WINBOND
+#define CONFIG_SF_DEFAULT_MODE		SPI_MODE_0
+#define CONFIG_CMD_SPI
+#define CONFIG_CMD_SF
+
+/* I2C */
+#define CONFIG_TEGRA2_I2C
+#define CONFIG_SYS_I2C_INIT_BOARD
+#define CONFIG_I2C_MULTI_BUS
+#define CONFIG_SYS_MAX_I2C_BUS		4
+#define CONFIG_SYS_I2C_SPEED		100000
+#define CONFIG_CMD_I2C
+
+/* pin-mux settings for seaboard */
+#define CONFIG_I2CP_PIN_MUX		1
+#define CONFIG_I2C1_PIN_MUX		1
+#define CONFIG_I2C2_PIN_MUX		2
+#define CONFIG_I2C3_PIN_MUX		1
+
+/* SD/MMC */
+#define CONFIG_MMC
+#define CONFIG_GENERIC_MMC
+#define CONFIG_TEGRA2_MMC
+#define CONFIG_CMD_MMC
+
+#define CONFIG_DOS_PARTITION
+#define CONFIG_EFI_PARTITION
+#define CONFIG_CMD_EXT2
+#define CONFIG_CMD_FAT
+
+#define TEGRA2_MMC_DEFAULT_DEVICE	"0"
+
+/* Environment in SPI */
+#define CONFIG_ENV_IS_IN_SPI_FLASH
+
+#define CONFIG_ENV_SECT_SIZE    CONFIG_ENV_SIZE
+#define CONFIG_ENV_OFFSET       (SZ_4M - CONFIG_ENV_SECT_SIZE)
 
 /*
  *  LCDC configuration
