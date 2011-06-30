@@ -76,6 +76,7 @@ static int load_kernel_wrapper(LoadKernelParams *params, uint64_t boot_flags,
 	status = LoadKernel(params);
 
 	VBDEBUG(PREFIX "LoadKernel status: %d\n", status);
+#ifdef VBOOT_DEBUG
 	if (status == LOAD_KERNEL_SUCCESS) {
 		VBDEBUG(PREFIX "partition_number:   0x%08x\n",
 				(int) params->partition_number);
@@ -83,20 +84,8 @@ static int load_kernel_wrapper(LoadKernelParams *params, uint64_t boot_flags,
 				(int) params->bootloader_address);
 		VBDEBUG(PREFIX "bootloader_size:    0x%08x\n",
 				(int) params->bootloader_size);
-
-		/* TODO(clchiou): deprecated when we fix crosbug:14022 */
-		if (params->partition_number == 2) {
-			setenv("kernelpart", "2");
-			setenv("rootpart", "3");
-		} else if (params->partition_number == 4) {
-			setenv("kernelpart", "4");
-			setenv("rootpart", "5");
-		} else {
-			VBDEBUG(PREFIX "unknown kernel partition: %d\n",
-					(int) params->partition_number);
-			status = LOAD_KERNEL_NOT_FOUND;
-		}
 	}
+#endif /* VBOOT_DEBUG */
 
 	return status;
 }
@@ -113,28 +102,12 @@ static int load_kernel_wrapper(LoadKernelParams *params, uint64_t boot_flags,
  * bootloader address.
  *
  * @param bootloader_address is the address of the bootloader in the buffer
- * @return 0 if it succeeds; non-zero if it fails
+ * @return kernel config address
  */
-static int load_kernel_config(void *bootloader_address)
+static char *get_kernel_config(char *bootloader_address)
 {
-	char buf[80 + CROS_CONFIG_SIZE];
-
-	strcpy(buf, "setenv bootargs ${bootargs} ");
-
 	/* Use the bootloader address to find the kernel config location. */
-	strncat(buf, bootloader_address - CROS_PARAMS_SIZE - CROS_CONFIG_SIZE,
-			CROS_CONFIG_SIZE);
-
-	/*
-	 * TODO(clchiou): Use run_command instead of setenv because we need
-	 * variable substitutions. This shouldn't be the case after we fix
-	 * crosbug:14022
-	 */
-	if (run_command(buf, 0)) {
-		VBDEBUG(PREFIX "run_command(%s) fail\n", buf);
-		return 1;
-	}
-	return 0;
+	return bootloader_address - CROS_PARAMS_SIZE - CROS_CONFIG_SIZE;
 }
 
 /* assert(0 <= val && val < 99); sprintf(dst, "%u", val); */
@@ -256,9 +229,11 @@ static void update_cmdline(char *src, int devnum, int partnum, uint8_t *guid,
  */
 static int boot_kernel_helper(LoadKernelParams *params)
 {
-	char *cmdline, cmdline_buf[4096];
+	char cmdline_buf[CROS_CONFIG_SIZE + 4096];
+	char cmdline_out[CROS_CONFIG_SIZE + 4096];
 	char load_address[32];
 	char *argv[2] = { "bootm", load_address };
+	char *cmdline;
 
 	VBDEBUG(PREFIX "boot_kernel\n");
 	VBDEBUG(PREFIX "kernel_buffer:      0x%p\n",
@@ -268,27 +243,24 @@ static int boot_kernel_helper(LoadKernelParams *params)
 
 	/*
 	 * casting bootloader_address of uint64_t type to uint32_t before
-	 * further casting it to void* to avoid compiler warning
+	 * further casting it to char * to avoid compiler warning
 	 * "cast to pointer from integer of different size"
 	 */
-	if (load_kernel_config((void*)(uint32_t)params->bootloader_address)) {
-		VBDEBUG(PREFIX "error: load kernel config failed\n");
-		return LOAD_KERNEL_INVALID;
-	}
+	cmdline = get_kernel_config((char *)
+			(uint32_t)params->bootloader_address);
+	strncpy(cmdline_buf, cmdline, CROS_CONFIG_SIZE);
 
-	if ((cmdline = getenv("bootargs"))) {
-		VBDEBUG(PREFIX "cmdline before update: %s\n", cmdline);
+	/* if we have init bootargs, append it */
+	if ((cmdline = getenv("bootargs")))
+		strcat(cmdline_buf, cmdline);
 
-		update_cmdline(cmdline, get_device_number(),
-				params->partition_number + 1,
-				params->partition_guid,
-				cmdline_buf);
-		setenv("bootargs", cmdline_buf);
-		VBDEBUG(PREFIX "cmdline after update:  %s\n",
-				getenv("bootargs"));
-	} else {
-		VBDEBUG(PREFIX "bootargs == NULL\n");
-	}
+	VBDEBUG(PREFIX "cmdline before update: %s\n", cmdline_buf);
+	update_cmdline(cmdline_buf, get_device_number(),
+			params->partition_number + 1, params->partition_guid,
+			cmdline_out);
+
+	setenv("bootargs", cmdline_out);
+	VBDEBUG(PREFIX "cmdline after update:  %s\n", getenv("bootargs"));
 
 	/*
 	 * TODO(clchiou): we probably should minimize calls to other u-boot
