@@ -359,8 +359,8 @@ static struct arch_name_map name_map[] = {
 
 ulong get_arch_number(void)
 {
+	const char *board_name = fdt_decode_get_model(gd->blob);
 	int i;
-	const char* board_name = get_board_name();
 
 	for (i = 0; i < ARRAY_SIZE(name_map); i++)
 		if (!strcmp(name_map[i].board_name, board_name))

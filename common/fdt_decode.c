@@ -563,6 +563,15 @@ int fdt_decode_sdmmc(const void *blob, int node, struct fdt_sdmmc *config)
 	return 0;
 }
 
+const char *fdt_decode_get_model(const void *blob)
+{
+	const char *model;
+
+	model = fdt_getprop(blob, 0, "model", NULL);
+	return model ? model : "<not defined>";
+}
+
+
 char *fdt_decode_get_config_string(const void *blob, const char *prop_name)
 {
 	const char *nodep;

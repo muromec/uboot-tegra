@@ -403,3 +403,11 @@ char *fdt_decode_get_config_string(const void *blob, const char *prop_name);
  *			-FDT_ERR_MISSING.
  */
 int fdt_decode_kbc(const void *blob, int node, struct fdt_kbc *config);
+
+/**
+ * Returns the model name of the device. This returns the /model property
+ * from the fdt.
+ *
+ * \return model name, or "<not defined>" if unknown
+ */
+const char *fdt_decode_get_model(const void *blob);
