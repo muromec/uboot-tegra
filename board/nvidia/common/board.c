@@ -53,18 +53,48 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
-#ifndef CONFIG_OF_CONTROL
-const struct tegra2_sysinfo sysinfo = {
-	CONFIG_TEGRA2_BOARD_STRING
-};
-#endif
-
 enum {
 	/* UARTs which we can enable */
 	UARTA	= 1 << 0,
 	UARTB	= 1 << 1,
 	UARTD	= 1 << 3,
 };
+
+#ifdef CONFIG_OF_CONTROL
+
+struct arch_name_map {
+	const char* board_name;
+	ulong	    arch_number;
+};
+
+static struct arch_name_map name_map[] = {
+	{"Google Kaen", MACH_TYPE_KAEN},
+	{"NVIDIA Seaboard", MACH_TYPE_SEABOARD},
+	{"Google Aebl", MACH_TYPE_AEBL},
+	{"<not defined>", MACH_TYPE_SEABOARD} /* this is the default */
+};
+
+static ulong get_arch_number(void)
+{
+	const char *board_name = fdt_decode_get_model(gd->blob);
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(name_map); i++)
+		if (!strcmp(name_map[i].board_name, board_name))
+			return name_map[i].arch_number;
+
+	/* should never happen */
+	puts("Failed to find arch number");
+	return 0;
+}
+
+#else /* !defined CONFIG_OF_CONTROL */
+
+const struct tegra2_sysinfo sysinfo = {
+	CONFIG_TEGRA2_BOARD_STRING
+};
+
+#endif
 
 /*
  * Routine: timer_init
@@ -328,46 +358,3 @@ int tegra_get_chip_type(void)
 		return TEGRA_SOC_UNKNOWN;
 	}
 }
-
-#ifdef CONFIG_OF_CONTROL
-
-const char* get_board_name(void)
-{
-	int len;
-	const char *board_name;
-	int node = fdt_node_offset_by_compatible(gd->blob, -1,
-						 CONFIG_COMPAT_STRING);
-
-	board_name = fdt_getprop(gd->blob, node, "model", &len);
-	if (!board_name)
-		board_name = "<not defined>";
-
-	return board_name;
-}
-
-struct arch_name_map {
-	const char* board_name;
-	ulong	    arch_number;
-};
-
-static struct arch_name_map name_map[] = {
-	{"Google Kaen", MACH_TYPE_KAEN},
-	{"NVIDIA Seaboard", MACH_TYPE_SEABOARD},
-	{"Google Aebl", MACH_TYPE_AEBL},
-	{"<not defined>", MACH_TYPE_SEABOARD} /* this is the default */
-};
-
-ulong get_arch_number(void)
-{
-	const char *board_name = fdt_decode_get_model(gd->blob);
-	int i;
-
-	for (i = 0; i < ARRAY_SIZE(name_map); i++)
-		if (!strcmp(name_map[i].board_name, board_name))
-			return name_map[i].arch_number;
-
-	/* should never happen */
-	puts("Failed to find arch number");
-	return 0;
-}
-#endif
