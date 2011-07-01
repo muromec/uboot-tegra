@@ -60,40 +60,10 @@ enum {
 	UARTD	= 1 << 3,
 };
 
-#ifdef CONFIG_OF_CONTROL
-
-struct arch_name_map {
-	const char* board_name;
-	ulong	    arch_number;
-};
-
-static struct arch_name_map name_map[] = {
-	{"Google Kaen", MACH_TYPE_KAEN},
-	{"NVIDIA Seaboard", MACH_TYPE_SEABOARD},
-	{"Google Aebl", MACH_TYPE_AEBL},
-	{"<not defined>", MACH_TYPE_SEABOARD} /* this is the default */
-};
-
-static ulong get_arch_number(void)
-{
-	const char *board_name = fdt_decode_get_model(gd->blob);
-	int i;
-
-	for (i = 0; i < ARRAY_SIZE(name_map); i++)
-		if (!strcmp(name_map[i].board_name, board_name))
-			return name_map[i].arch_number;
-
-	/* should never happen */
-	puts("Failed to find arch number");
-	return 0;
-}
-
-#else /* !defined CONFIG_OF_CONTROL */
-
+#ifndef CONFIG_OF_CONTROL
 const struct tegra2_sysinfo sysinfo = {
 	CONFIG_TEGRA2_BOARD_STRING
 };
-
 #endif
 
 /*
@@ -223,15 +193,7 @@ static void power_det_init(void)
  */
 int board_init(void)
 {
-	/* boot param addr */
-	gd->bd->bi_boot_params = (NV_PA_SDRAM_BASE + 0x100);
-	/* board id for Linux */
-
-#ifdef CONFIG_OF_CONTROL
-	gd->bd->bi_arch_number = get_arch_number();
-#else
-	gd->bd->bi_arch_number = CONFIG_MACH_TYPE;
-#endif
+	/* Do clocks and UART first so that printf() works */
 	clock_init();
 #ifdef CONFIG_SPI_UART_SWITCH
 	gpio_config_uart(gd->blob);
@@ -256,6 +218,17 @@ int board_init(void)
 	warmboot_prepare_code(TEGRA_LP0_ADDR, TEGRA_LP0_SIZE);
 #endif
 
+	/* boot param addr */
+	gd->bd->bi_boot_params = (NV_PA_SDRAM_BASE + 0x100);
+
+	/* board id for Linux */
+#ifdef CONFIG_OF_CONTROL
+	gd->bd->bi_arch_number = fdt_decode_get_machine_arch_id(gd->blob);
+	if (gd->bd->bi_arch_number == -1U)
+		printf("Warning: No /config/machine-arch-id defined in fdt\n");
+#else
+	gd->bd->bi_arch_number = CONFIG_MACH_TYPE;
+#endif
 	return 0;
 }
 
