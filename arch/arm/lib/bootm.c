@@ -209,6 +209,13 @@ static int bootm_linux_fdt(int machid, bootm_headers_t *images)
 	if (ret)
 		return ret;
 
+#ifdef CONFIG_OF_UPDATE_FDT_BEFORE_BOOT
+	/* this must be earlier than boot_relocate_fdt */
+	ret = fit_update_fdt_before_boot(*of_flat_tree, &of_size);
+	if (ret)
+		return ret;
+#endif
+
 	ret = boot_relocate_fdt(lmb, bootmap_base, of_flat_tree, &of_size);
 	if (ret)
 		return ret;

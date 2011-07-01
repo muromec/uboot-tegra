@@ -90,5 +90,9 @@ int fdt_node_offset_by_compat_reg(void *blob, const char *compat,
 int fdt_alloc_phandle(void *blob);
 int fdt_add_edid(void *blob, const char *compat, unsigned char *buf);
 
+#if defined(CONFIG_OF_UPDATE_FDT_BEFORE_BOOT) && !defined(CONFIG_OF_NO_KERNEL)
+int fit_update_fdt_before_boot(char *fdt, ulong *new_size);
+# endif
+
 #endif /* ifdef CONFIG_OF_LIBFDT */
 #endif /* ifndef __FDT_SUPPORT_H */
