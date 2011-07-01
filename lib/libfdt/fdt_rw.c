@@ -354,6 +354,35 @@ int fdt_add_subnode(void *fdt, int parentoffset, const char *name)
 	return fdt_add_subnode_namelen(fdt, parentoffset, name, strlen(name));
 }
 
+int fdt_add_subnodes_from_path(void *fdt, int parentoffset, char *path)
+{
+	int err;
+	char *sep;
+
+	/* skip leading '/' */
+	while (*path == '/')
+		path++;
+
+	/* if sep is NULL, there is no more nodes to add */
+	for (err = parentoffset, sep = path;
+			parentoffset >= 0 && sep && *path;
+			parentoffset = err, path = sep + 1) {
+		sep = strchr(path, '/');
+		if (path == sep) /* repeating '/' */
+			continue;
+
+		if (sep)
+			*sep = '\0';
+		err = fdt_add_subnode(fdt, parentoffset, path);
+		if (err == -FDT_ERR_EXISTS)
+			err = fdt_subnode_offset(fdt, parentoffset, path);
+		if (sep)
+			*sep = '/';
+	}
+
+	return parentoffset;
+}
+
 int fdt_del_node(void *fdt, int nodeoffset)
 {
 	int endoffset;

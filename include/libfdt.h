@@ -1104,6 +1104,23 @@ int fdt_add_subnode_namelen(void *fdt, int parentoffset,
 int fdt_add_subnode(void *fdt, int parentoffset, const char *name);
 
 /**
+ * fdt_add_subnodes_from_path - creates new nodes along the path
+ * @fdt:		pointer to the device tree blob
+ * @parentoffset:	offset to parent node
+ * @path:		a path string
+ *
+ * fdt_add_subnodes_from_path() creates new nodes along the path. For example,
+ * if you call this function with parentoffset = 0 and path = "/A/B/C", it will
+ * create three nodes: A, B, C; node A will be a sub node of root node, B sub
+ * node of A, and C sub node of B.
+ *
+ * returns:
+ *	node offset of the leaf node (>=0), i.e., offset of node C, on success
+ *	-FDT_ERR_*, if error
+ */
+int fdt_add_subnodes_from_path(void *fdt, int parentoffset, char *path);
+
+/**
  * fdt_del_node - delete a node (subtree)
  * @fdt: pointer to the device tree blob
  * @nodeoffset: offset of the node to nop
