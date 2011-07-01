@@ -11,7 +11,6 @@
 #include <common.h>
 #include <command.h>
 #include <lcd.h>
-#include <malloc.h>
 #include <chromeos/common.h>
 #include <chromeos/crossystem_data.h>
 #include <chromeos/firmware_storage.h>
@@ -51,14 +50,13 @@ static struct internal_state_t {
 	firmware_storage_t file;
 	VbNvContext nvcxt;
 	VbSharedDataHeader *shared;
-	void *gbb_data;
+	VbKeyBlockHeader *key_block;
 	uint64_t boot_flags;
 	uint32_t recovery_request;
 	ScreenIndex current_screen;
 	crossystem_data_t cdata;
-
-	/* Can we make this a non-pointer, and avoid a malloc? */
-	VbKeyBlockHeader *key_block;
+	uint8_t gbb_data[CONFIG_LENGTH_GBB];
+	uint8_t key_block_buffer[CONFIG_LENGTH_VBLOCK_A];
 } _state;
 
 /**
@@ -165,12 +163,8 @@ static uint32_t init_internal_state(crossystem_data_t *cdata, int *dev_mode)
 	/* sad enough, SCREEN_BLANK != 0 */
 	_state.current_screen = SCREEN_BLANK;
 
-	/* malloc spaces for buffers */
-	_state.gbb_data = malloc(CONFIG_LENGTH_GBB);
 	_state.shared = (VbSharedDataHeader *)cdata->vbshared_data;
-	_state.key_block = (VbKeyBlockHeader *)malloc(CONFIG_LENGTH_VBLOCK_A);
-	if (!_state.gbb_data || !_state.shared || !_state.key_block)
-		return VBNV_RECOVERY_RO_UNSPECIFIED;
+	_state.key_block = (VbKeyBlockHeader *)_state.key_block_buffer;
 
 	/* open firmware storage device and load gbb */
 	if (firmware_storage_open_spi(&_state.file)) {
