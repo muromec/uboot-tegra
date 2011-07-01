@@ -24,12 +24,18 @@
 #include <common.h>
 #include <command.h>
 #include <version.h>
+#ifdef CONFIG_SYS_COREBOOT
+#include <asm/ic/coreboot/sysinfo.h>
+#endif
 
 extern char version_string[];
 
 int do_version(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
 	printf("\n%s\n", version_string);
+#ifdef CONFIG_SYS_COREBOOT
+	printf("coreboot-%s (%s)\n", lib_sysinfo.version, lib_sysinfo.build);
+#endif
 #ifdef CC_VERSION_STRING
 	puts(CC_VERSION_STRING "\n");
 #endif
