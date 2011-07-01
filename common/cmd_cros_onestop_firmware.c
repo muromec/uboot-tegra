@@ -13,10 +13,10 @@
 #include <lcd.h>
 #include <malloc.h>
 #include <chromeos/common.h>
+#include <chromeos/crossystem_data.h>
 #include <chromeos/firmware_storage.h>
 #include <chromeos/gbb_bmpblk.h>
 #include <chromeos/gpio.h>
-#include <chromeos/kernel_shared_data.h>
 #include <chromeos/load_kernel_helper.h>
 #include <chromeos/os_storage.h>
 #include <chromeos/power_management.h>
@@ -55,6 +55,7 @@ static struct internal_state_t {
 	uint64_t boot_flags;
 	uint32_t recovery_request;
 	ScreenIndex current_screen;
+	crossystem_data_t cdata;
 
 	/* Can we make this a non-pointer, and avoid a malloc? */
 	VbKeyBlockHeader *key_block;
@@ -104,8 +105,8 @@ static uint32_t init_internal_state_nvcontext(VbNvContext *nvcxt,
 }
 
 /**
- * This initializes data blob that firmware shares with kernel after checking
- * the GPIOs for recovery/developer. The caller has to initialize:
+ * This initializes crossystem data blob after checking the GPIOs for
+ * recovery/developer. The caller has to initialize:
  *   firmware storage device
  *   gbb
  *   nvcontext
@@ -114,9 +115,10 @@ static uint32_t init_internal_state_nvcontext(VbNvContext *nvcxt,
  * @return VBNV_RECOVERY_NOT_REQUESTED if it succeeds; recovery reason if it
  *         fails
  */
-static uint32_t init_internal_state_bottom_half(void *ksd, int *dev_mode)
+static uint32_t init_internal_state_bottom_half(crossystem_data_t *cdata,
+		int *dev_mode)
 {
-	uint8_t frid[ID_LEN];
+	char frid[ID_LEN];
 	int write_protect_sw, recovery_sw, developer_sw;
 
 	/* fetch gpios at once */
@@ -138,10 +140,10 @@ static uint32_t init_internal_state_bottom_half(void *ksd, int *dev_mode)
 		return VBNV_RECOVERY_RO_SHARED_DATA;
 	}
 
-	if (cros_ksd_init(ksd, frid, CONFIG_OFFSET_FMAP,
+	if (crossystem_data_init(cdata, frid, CONFIG_OFFSET_FMAP,
 				_state.gbb_data, _state.nvcxt.raw,
 				write_protect_sw, recovery_sw, developer_sw)) {
-		VBDEBUG(PREFIX "init kernel shared data fail\n");
+		VBDEBUG(PREFIX "init crossystem data fail\n");
 		return VBNV_RECOVERY_RO_UNSPECIFIED;
 	}
 
@@ -149,15 +151,14 @@ static uint32_t init_internal_state_bottom_half(void *ksd, int *dev_mode)
 }
 
 /**
- * This initializes global variable [_state] and kernel shared data.
+ * This initializes global variable [_state] and crossystem data.
  *
  * @return VBNV_RECOVERY_NOT_REQUESTED if it succeeds; recovery reason if it
  *         fails
  */
-static uint32_t init_internal_state(void *ksd, int *dev_mode)
+static uint32_t init_internal_state(crossystem_data_t *cdata, int *dev_mode)
 {
 	uint32_t reason;
-	KernelSharedDataType *ksd_content = ksd;
 
 	*dev_mode = 0;
 
@@ -166,7 +167,7 @@ static uint32_t init_internal_state(void *ksd, int *dev_mode)
 
 	/* malloc spaces for buffers */
 	_state.gbb_data = malloc(CONFIG_LENGTH_GBB);
-	_state.shared = (VbSharedDataHeader *)ksd_content->shared_data_body;
+	_state.shared = (VbSharedDataHeader *)cdata->vbshared_data;
 	_state.key_block = (VbKeyBlockHeader *)malloc(CONFIG_LENGTH_VBLOCK_A);
 	if (!_state.gbb_data || !_state.shared || !_state.key_block)
 		return VBNV_RECOVERY_RO_UNSPECIFIED;
@@ -194,9 +195,9 @@ static uint32_t init_internal_state(void *ksd, int *dev_mode)
 		return VBNV_RECOVERY_RO_UNSPECIFIED;
 	}
 
-	reason = init_internal_state_bottom_half(ksd, dev_mode);
+	reason = init_internal_state_bottom_half(cdata, dev_mode);
 	if (reason != VBNV_RECOVERY_NOT_REQUESTED) {
-		VBDEBUG(PREFIX "init ksd fail\n");
+		VBDEBUG(PREFIX "init cdata fail\n");
 		return reason;
 	}
 
@@ -337,12 +338,12 @@ static uint32_t boot_kernel_helper(void)
 {
 	int status;
 
-	cros_ksd_dump(get_last_1mb_of_ram());
+	crossystem_data_dump(&_state.cdata);
 
 	status = boot_kernel(_state.boot_flags,
 			_state.gbb_data, CONFIG_LENGTH_GBB,
 			_state.shared, VB_SHARED_DATA_REC_SIZE,
-			&_state.nvcxt);
+			&_state.nvcxt, &_state.cdata);
 
 	switch(status) {
 	case LOAD_KERNEL_NOT_FOUND:
@@ -368,7 +369,7 @@ static uint32_t boot_kernel_helper(void)
  *
  * @param reason - recovery reason
  */
-static void recovery_boot(void *ksd, uint32_t reason)
+static void recovery_boot(crossystem_data_t *cdata, uint32_t reason)
 {
 	VBDEBUG(PREFIX "recovery boot\n");
 
@@ -378,9 +379,9 @@ static void recovery_boot(void *ksd, uint32_t reason)
 	 * 2. test_clear_mem_regions()
 	 * 3. clear_ram_not_in_use()
 	 */
-	cros_ksd_set_active_main_firmware(ksd, RECOVERY_FIRMWARE,
+	crossystem_data_set_active_main_firmware(cdata, RECOVERY_FIRMWARE,
 			RECOVERY_TYPE);
-	cros_ksd_set_recovery_reason(ksd, reason);
+	crossystem_data_set_recovery_reason(cdata, reason);
 
 	/* can we remove this if? What is it for? */
 	if (!(_state.boot_flags & BOOT_FLAG_DEVELOPER)) {
@@ -411,15 +412,15 @@ static void recovery_boot(void *ksd, uint32_t reason)
 }
 
 /**
- * This initializes TPM and kernel share data blob (by pretending it boots
+ * This initializes TPM and crossystem data blob (by pretending it boots
  * rewritable firmware A).
  *
  * @return VBNV_RECOVERY_NOT_REQUESTED if it succeeds; recovery reason if it
  *         fails
  */
-static uint32_t rewritable_boot_init(void *ksd, int boot_type)
+static uint32_t rewritable_boot_init(crossystem_data_t *cdata, int boot_type)
 {
-	uint8_t fwid[ID_LEN];
+	char fwid[ID_LEN];
 
 	/* we pretend we boot from r/w firmware A */
 	if (firmware_storage_read(&_state.file, CONFIG_OFFSET_RW_FWID_A,
@@ -428,8 +429,8 @@ static uint32_t rewritable_boot_init(void *ksd, int boot_type)
 		return VBNV_RECOVERY_RW_SHARED_DATA;
 	}
 
-	cros_ksd_set_fwid(ksd, fwid);
-	cros_ksd_set_active_main_firmware(ksd, REWRITABLE_FIRMWARE_A,
+	crossystem_data_set_fwid(cdata, fwid);
+	crossystem_data_set_active_main_firmware(cdata, REWRITABLE_FIRMWARE_A,
 			boot_type);
 
 	if (TlclStubInit() != TPM_SUCCESS) {
@@ -536,18 +537,18 @@ static uint32_t normal_boot(void)
  * a normal boot, but if it returns to its caller, the caller should enter
  * recovery or reboot.
  *
- * @param ksd	Pointer to kernel shared data
+ * @param cdata	Pointer to crossystem data
  * @return required action for caller:
  *	REBOOT_TO_CURRENT_MODE	Reboot
  *	anything else		Go into recovery
  */
-static unsigned onestop_boot(void *ksd)
+static unsigned onestop_boot(crossystem_data_t *cdata)
 {
 	unsigned reason = VBNV_RECOVERY_NOT_REQUESTED;
 	int dev_mode;
 
 	/* Work through our initialization one step at a time */
-	reason = init_internal_state(ksd, &dev_mode);
+	reason = init_internal_state(cdata, &dev_mode);
 	if (reason == VBNV_RECOVERY_NOT_REQUESTED)
 		reason = _state.recovery_request;
 
@@ -555,7 +556,7 @@ static unsigned onestop_boot(void *ksd)
 		reason = init_vbshared_data(dev_mode);
 
 	if (reason == VBNV_RECOVERY_NOT_REQUESTED)
-		reason = rewritable_boot_init(ksd, dev_mode ?
+		reason = rewritable_boot_init(cdata, dev_mode ?
 			DEVELOPER_TYPE : NORMAL_TYPE);
 
 	if (reason == VBNV_RECOVERY_NOT_REQUESTED) {
@@ -577,15 +578,14 @@ static unsigned onestop_boot(void *ksd)
 int do_cros_onestop_firmware(cmd_tbl_t *cmdtp, int flag, int argc,
 		char * const argv[])
 {
-	void *ksd = get_last_1mb_of_ram();
 	unsigned reason;
 
 	clear_screen();
-	reason = onestop_boot(ksd);
+	reason = onestop_boot(&_state.cdata);
 	if (reason == VBNV_COMMAND_PROMPT)
 		return 0;
 	if (reason != REBOOT_TO_CURRENT_MODE)
-		recovery_boot(ksd, reason);
+		recovery_boot(&_state.cdata, reason);
 	cold_reboot();
 	return 0;
 }

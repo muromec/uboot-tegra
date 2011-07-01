@@ -11,6 +11,7 @@
 #ifndef CHROMEOS_LOAD_KERNEL_HELPER_H_
 #define CHROMEOS_LOAD_KERNEL_HELPER_H_
 
+#include <chromeos/crossystem_data.h>
 #include <linux/types.h>
 #include <vboot_nvstorage.h>
 
@@ -25,6 +26,7 @@
  * @param vbshared_data points to VbSharedData blob
  * @param vbshared_size is the size of the VbSharedData blob
  * @param nvcxt points to a VbNvContext object
+ * @param cdata points to crosystem data
  * @return error codes, e.g., LOAD_KERNEL_INVALID if either the verification
  *         fails or the kernel is not bootable; otherwise, this function
  *         boots the kernel and never returns to its caller
@@ -32,6 +34,6 @@
 int boot_kernel(uint64_t boot_flags,
 		void *gbb_data, uint32_t gbb_size,
 		void *vbshared_data, uint32_t vbshared_size,
-		VbNvContext *nvcxt);
+		VbNvContext *nvcxt, crossystem_data_t *cdata);
 
 #endif /* CHROMEOS_LOAD_KERNEL_HELPER_H_ */

@@ -278,7 +278,7 @@ static int boot_kernel_helper(LoadKernelParams *params)
 int boot_kernel(uint64_t boot_flags,
 		void *gbb_data, uint32_t gbb_size,
 		void *vbshared_data, uint32_t vbshared_size,
-		VbNvContext *nvcxt)
+		VbNvContext *nvcxt, crossystem_data_t *cdata)
 {
 	LoadKernelParams params;
 	int status;

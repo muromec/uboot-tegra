@@ -22,7 +22,7 @@
 
 #include <common.h>
 #include <chromeos/firmware_storage.h>
-#include <chromeos/kernel_shared_data.h>
+#include <chromeos/crossystem_data.h>
 #include <vboot_struct.h>
 
 #define VBGLOBAL_SIGNATURE	"VBGLOBAL"
@@ -35,7 +35,7 @@ typedef struct {
 	uint32_t		gbb_size;
 	uint8_t			gbb_data[CONFIG_LENGTH_GBB];
 	uint32_t		kshared_data_size;
-	KernelSharedDataType	kshared_data;
+	crossystem_data_t	kshared_data;
 } vb_global_t;
 
 /* Get vboot global data pointer. */
