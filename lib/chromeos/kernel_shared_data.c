@@ -29,7 +29,7 @@ void *get_last_1mb_of_ram(void)
 }
 
 int cros_ksd_init(void *kernel_shared_data, uint8_t *frid,
-		uint32_t fmap_data, void *gbb_data, VbNvContext *nvcxt,
+		uint32_t fmap_data, void *gbb_data, void *nvcxt_raw,
 		int write_protect_sw, int recovery_sw, int developer_sw)
 {
 	KernelSharedDataType *sd = (KernelSharedDataType *)kernel_shared_data;
@@ -72,7 +72,7 @@ int cros_ksd_init(void *kernel_shared_data, uint8_t *frid,
 
 	sd->nvcxt_lba = NVCONTEXT_LBA;
 
-	memcpy(sd->nvcxt_cache, nvcxt->raw, VBNV_BLOCK_SIZE);
+	memcpy(sd->nvcxt_cache, nvcxt_raw, VBNV_BLOCK_SIZE);
 
 	return 0;
 }

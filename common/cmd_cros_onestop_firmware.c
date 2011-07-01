@@ -135,7 +135,7 @@ static uint32_t init_internal_state_bottom_half(void *ksd, int *dev_mode)
 	}
 
 	if (cros_ksd_init(ksd, frid, CONFIG_OFFSET_FMAP,
-				_state.gbb_data, &_state.nvcxt,
+				_state.gbb_data, _state.nvcxt.raw,
 				write_protect_sw, recovery_sw, developer_sw)) {
 		VBDEBUG(PREFIX "init kernel shared data fail\n");
 		return VBNV_RECOVERY_RO_UNSPECIFIED;

@@ -70,14 +70,14 @@ void *get_last_1mb_of_ram(void);
  * @param frid r/o firmware id; a zero-terminated string shorter than ID_LEN
  * @param fmap_data is the address of fmap in firmware
  * @param gbb_data points to gbb blob
- * @param nvcxt points to a VbNvContext object
+ * @param nvcxt_raw points to the VbNvContext raw data
  * @param write_protect_sw stores the value of write protect gpio
  * @param recovery_sw stores the value of recovery mode gpio
  * @param developer_sw stores the value of developer mode gpio
  * @return 0 if it succeeds; non-zero if it fails
  */
 int cros_ksd_init(void *kernel_shared_data, uint8_t *frid,
-		uint32_t fmap_data, void *gbb_data, VbNvContext *nvcxt,
+		uint32_t fmap_data, void *gbb_data, void *nvcxt_raw,
 		int write_protect_sw, int recovery_sw, int developer_sw);
 
 /**
