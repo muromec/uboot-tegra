@@ -285,6 +285,9 @@ int	saveenv	     (void);
 int inline setenv   (char *, char *);
 #else
 int	setenv	     (char *, char *);
+
+/* Set environment to the default value */
+void env_set_default(void);
 #endif /* CONFIG_PPC */
 #ifdef CONFIG_ARM
 # include <asm/mach-types.h>

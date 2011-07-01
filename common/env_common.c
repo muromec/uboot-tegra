@@ -246,6 +246,11 @@ void env_relocate (void)
 	}
 }
 
+void env_set_default(void)
+{
+	set_default_env(NULL);
+}
+
 #ifdef CONFIG_AUTO_COMPLETE
 int env_complete(char *var, int maxv, char *cmdv[], int bufsz, char *buf)
 {

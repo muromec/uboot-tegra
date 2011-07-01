@@ -2455,6 +2455,12 @@ Configuration Settings:
 	cases. This setting can be used to tune behaviour; see
 	lib/hashtable.c for details.
 
+- CONFIG_DELAY_ENVIRONMENT
+		Normally the environment is loaded when the board is
+		intialized so that it is available to U-Boot. This inhibits
+		that so that the environment is not available until
+		explicitly loaded later by U-Boot code.
+
 The following definitions that deal with the placement and management
 of environment data (variable area); in general, we support the
 following configurations:
