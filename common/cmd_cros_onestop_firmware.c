@@ -41,6 +41,10 @@ enum {
 	KEY_BOOT_INTERNAL = 0x04, /* ctrl-d */
 	KEY_BOOT_EXTERNAL = 0x15, /* ctrl-u */
 	KEY_GOTO_RECOVERY = 0x1b, /* escape */
+	KEY_COMMAND_PROMPT = 0x03, /* ctrl-c */
+
+	/* To do - discuss bringing this into vboot officially */
+	VBNV_COMMAND_PROMPT = 0xfe,
 };
 
 static struct internal_state_t {
@@ -491,6 +495,11 @@ static uint32_t developer_boot(void)
 			beep();
 			break;
 
+		case KEY_COMMAND_PROMPT:
+			/* Load developer environment variables */
+			env_relocate();
+			return VBNV_COMMAND_PROMPT;
+
 		case ' ':
 		case '\r':
 		case '\n':
@@ -573,6 +582,8 @@ int do_cros_onestop_firmware(cmd_tbl_t *cmdtp, int flag, int argc,
 
 	clear_screen();
 	reason = onestop_boot(ksd);
+	if (reason == VBNV_COMMAND_PROMPT)
+		return 0;
 	if (reason != REBOOT_TO_CURRENT_MODE)
 		recovery_boot(ksd, reason);
 	cold_reboot();
