@@ -11,6 +11,9 @@
 
 #define CONFIG_CHROMEOS
 
+/* don't load the environment until we enter developer mode */
+#define CONFIG_DELAY_ENVIRONMENT
+
 /* for security reason, Chrome OS kernel must be loaded to specific location */
 #define CONFIG_CHROMEOS_KERNEL_LOADADDR	0x00100000
 #define CONFIG_CHROMEOS_KERNEL_BUFSIZE	0x00800000
