@@ -11,6 +11,7 @@
 		silent_console = <0>;
 		odmdata = <0x300d8011>;
 		hwid = "ARM KAEN TEST 3084";
+		machine-arch-id = <3217>;
 	};
 
 	aliases {
