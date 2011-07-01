@@ -411,3 +411,12 @@ int fdt_decode_kbc(const void *blob, int node, struct fdt_kbc *config);
  * \return model name, or "<not defined>" if unknown
  */
 const char *fdt_decode_get_model(const void *blob);
+
+/**
+ * Returns the machine architecture ID of the device. This is used by Linux
+ * to specify the machine that it is running on. We put it in the fdt so that
+ * it can easily be controlled from there.
+ *
+ * \return architecture number or -1 if not found
+ */
+int fdt_decode_get_machine_arch_id(const void *blob);

@@ -571,6 +571,10 @@ const char *fdt_decode_get_model(const void *blob)
 	return model ? model : "<not defined>";
 }
 
+int fdt_decode_get_machine_arch_id(const void *blob)
+{
+	return get_config_int(blob, "machine-arch-id", -1);
+}
 
 char *fdt_decode_get_config_string(const void *blob, const char *prop_name)
 {
