@@ -16,6 +16,7 @@ COBJS-$(CONFIG_CHROMEOS) += crossystem_data.o
 COBJS-$(CONFIG_CHROMEOS) += firmware_storage.o
 COBJS-$(CONFIG_CHROMEOS) += firmware_storage_spi.o
 COBJS-$(CONFIG_CHROMEOS) += load_kernel_helper.o
+COBJS-$(CONFIG_CHROMEOS) += onestop.o
 COBJS-$(CONFIG_CHROMEOS) += os_storage.o
 COBJS-$(CONFIG_CHROMEOS) += tlcl_stub.o
 COBJS-$(CONFIG_CHROMEOS) += utility.o

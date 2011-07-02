@@ -39,6 +39,7 @@ include $(TOPDIR)/config.mk
 LIB	= $(obj)libchromeos_hardware_interface.a
 
 COBJS-$(CONFIG_CHROMEOS) += gpio.o
+COBJS-$(CONFIG_CHROMEOS) += onestop_board_specific.o
 COBJS-$(CONFIG_CHROMEOS) += power_management.o
 
 COBJS	:= $(COBJS-y)

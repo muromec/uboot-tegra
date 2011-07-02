@@ -17,6 +17,7 @@
 #include <chromeos/gbb_bmpblk.h>
 #include <chromeos/gpio.h>
 #include <chromeos/load_kernel_helper.h>
+#include <chromeos/onestop.h>
 #include <chromeos/os_storage.h>
 #include <chromeos/power_management.h>
 #include <chromeos/vboot_nvstorage_helper.h>
@@ -561,30 +562,40 @@ static uint32_t normal_boot(struct os_storage *oss, crossystem_data_t *cdata,
  * recovery or reboot.
  *
  * @param file		firmware storage interface
- * @param cdata	Pointer to crossystem data
+ * @param gbb_data	Pointer to GBB data blob
+ * @param cdata		Pointer to crossystem data
  * @param oss		OS storage interface
+ * @param dev_mode	set to 1 if in developer mode, 0 if not
  * @return required action for caller:
  *	REBOOT_TO_CURRENT_MODE	Reboot
+	VBNV_COMMAND_PROMPT	Return to U-Boot command prompt
  *	anything else		Go into recovery
  */
 static unsigned onestop_boot(firmware_storage_t *file, struct os_storage *oss,
-		crossystem_data_t *cdata, VbNvContext *nvcxt)
+		uint8_t *gbb_data, crossystem_data_t *cdata, VbNvContext *nvcxt,
+		int *dev_mode)
 {
 	unsigned reason = VBNV_RECOVERY_NOT_REQUESTED;
-	int dev_mode;
+
+	VBDEBUG(PREFIX "%s onestop\n", is_ro_firmware() ? "r/o" : "r/w");
 
 	/* Work through our initialization one step at a time */
-	reason = init_internal_state(file, cdata, &dev_mode, oss, nvcxt);
+	reason = init_internal_state(file, cdata, dev_mode, oss, nvcxt);
 
 	if (reason == VBNV_RECOVERY_NOT_REQUESTED)
-		reason = init_vbshared_data(file, dev_mode, nvcxt);
+		if (is_ro_firmware() && !is_tpm_trust_ro_firmware())
+			reason = boot_rw_firmware(file, *dev_mode,
+					gbb_data, cdata, nvcxt);
 
 	if (reason == VBNV_RECOVERY_NOT_REQUESTED)
-		reason = rewritable_boot_init(file, cdata, dev_mode ?
+		reason = init_vbshared_data(file, *dev_mode, nvcxt);
+
+	if (reason == VBNV_RECOVERY_NOT_REQUESTED)
+		reason = rewritable_boot_init(file, cdata, *dev_mode ?
 			DEVELOPER_TYPE : NORMAL_TYPE);
 
 	if (reason == VBNV_RECOVERY_NOT_REQUESTED) {
-		if (dev_mode)
+		if (*dev_mode)
 			reason = developer_boot(oss, cdata, nvcxt);
 
 		/*
@@ -606,9 +617,12 @@ int do_cros_onestop_firmware(cmd_tbl_t *cmdtp, int flag, int argc,
 	struct os_storage os_storage;
 	firmware_storage_t file;
 	VbNvContext nvcxt;
+	int dev_mode;
 
 	clear_screen();
-	reason = onestop_boot(&file, &os_storage, &_state.cdata, &nvcxt);
+	reason = onestop_boot(&file, &os_storage,
+			      _state.gbb_data, &_state.cdata, &nvcxt,
+			      &dev_mode);
 	if (reason == VBNV_COMMAND_PROMPT)
 		return 0;
 	if (reason != REBOOT_TO_CURRENT_MODE)
