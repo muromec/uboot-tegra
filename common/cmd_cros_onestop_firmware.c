@@ -50,7 +50,6 @@ static struct internal_state_t {
 	VbSharedDataHeader *shared;
 	VbKeyBlockHeader *key_block;
 	uint64_t boot_flags;
-	uint32_t recovery_request;
 	ScreenIndex current_screen;
 	crossystem_data_t cdata;
 	uint8_t gbb_data[CONFIG_LENGTH_GBB];
@@ -72,8 +71,7 @@ static uint32_t init_internal_state_nvcontext(VbNvContext *nvcxt,
 	}
 	VBDEBUG(PREFIX "nvcxt: %s\n", nvcontext_to_str(nvcxt));
 
-	if (VbNvGet(nvcxt, VBNV_RECOVERY_REQUEST,
-				recovery_request)) {
+	if (VbNvGet(nvcxt, VBNV_RECOVERY_REQUEST, recovery_request)) {
 		VBDEBUG(PREFIX "fail to read recovery request\n");
 		return 1;
 	}
@@ -119,6 +117,7 @@ static uint32_t init_internal_state_bottom_half(firmware_storage_t *file,
 {
 	char frid[ID_LEN];
 	int write_protect_sw, recovery_sw, developer_sw;
+	uint32_t reason = VBNV_RECOVERY_NOT_REQUESTED;
 
 	/* fetch gpios at once */
 	write_protect_sw = is_firmware_write_protect_gpio_asserted();
@@ -129,24 +128,24 @@ static uint32_t init_internal_state_bottom_half(firmware_storage_t *file,
 		_state.boot_flags |= BOOT_FLAG_DEV_FIRMWARE;
 		*dev_mode = 1;
 	}
-	if (recovery_sw) {
-		_state.boot_flags |= BOOT_FLAG_RECOVERY;
-		_state.recovery_request = VBNV_RECOVERY_RO_MANUAL;
-	}
 	if (firmware_storage_read(file, CONFIG_OFFSET_RO_FRID,
 				CONFIG_LENGTH_RO_FRID, frid)) {
 		VBDEBUG(PREFIX "read frid fail\n");
-		return VBNV_RECOVERY_RO_SHARED_DATA;
+		reason = VBNV_RECOVERY_RO_SHARED_DATA;
 	}
 
 	if (crossystem_data_init(cdata, frid, CONFIG_OFFSET_FMAP,
 				_state.gbb_data, nvcxt->raw,
 				write_protect_sw, recovery_sw, developer_sw)) {
 		VBDEBUG(PREFIX "init crossystem data fail\n");
-		return VBNV_RECOVERY_RO_UNSPECIFIED;
+		reason = VBNV_RECOVERY_RO_UNSPECIFIED;
+	}
+	if (recovery_sw) {
+		_state.boot_flags |= BOOT_FLAG_RECOVERY;
+		reason = VBNV_RECOVERY_RO_MANUAL;
 	}
 
-	return VBNV_RECOVERY_NOT_REQUESTED;
+	return reason;
 }
 
 /**
@@ -162,7 +161,7 @@ static uint32_t init_internal_state(firmware_storage_t *file,
 		crossystem_data_t *cdata, int *dev_mode,
 		struct os_storage *oss, VbNvContext *nvcxt)
 {
-	uint32_t reason;
+	uint32_t reason, recovery_request;
 
 	*dev_mode = 0;
 
@@ -190,21 +189,25 @@ static uint32_t init_internal_state(firmware_storage_t *file,
 		VBDEBUG(PREFIX "mmc %d init fail\n", MMC_INTERNAL_DEVICE);
 		return VBNV_RECOVERY_RO_UNSPECIFIED;
 	}
-	if (init_internal_state_nvcontext(nvcxt,
-			&_state.recovery_request)) {
+	if (init_internal_state_nvcontext(nvcxt, &recovery_request)) {
 		VBDEBUG(PREFIX "fail to load nvcontext\n");
 		return VBNV_RECOVERY_RO_UNSPECIFIED;
 	}
 
 	reason = init_internal_state_bottom_half(file, cdata, dev_mode, nvcxt);
+
+	/* process a recovery request from nvcontext */
+	if (reason == VBNV_RECOVERY_NOT_REQUESTED &&
+			recovery_request != VBNV_RECOVERY_NOT_REQUESTED)
+		reason = recovery_request;
+	VBDEBUG(PREFIX "boot_flags = 0x%llx\n", _state.boot_flags);
 	if (reason != VBNV_RECOVERY_NOT_REQUESTED) {
-		VBDEBUG(PREFIX "init cdata fail\n");
-		return reason;
+		VBDEBUG(PREFIX "init cdata %s\n",
+			reason == VBNV_RECOVERY_RO_MANUAL ? "recovery" :
+				"fail");
 	}
 
-	VBDEBUG(PREFIX "boot_flags = 0x%llx\n", _state.boot_flags);
-
-	return VBNV_RECOVERY_NOT_REQUESTED;
+	return reason;
 }
 
 /* forward declare a (private) struct of vboot_reference */
@@ -570,8 +573,6 @@ static unsigned onestop_boot(firmware_storage_t *file, struct os_storage *oss,
 
 	/* Work through our initialization one step at a time */
 	reason = init_internal_state(file, cdata, &dev_mode, oss, nvcxt);
-	if (reason == VBNV_RECOVERY_NOT_REQUESTED)
-		reason = _state.recovery_request;
 
 	if (reason == VBNV_RECOVERY_NOT_REQUESTED)
 		reason = init_vbshared_data(file, dev_mode, nvcxt);
