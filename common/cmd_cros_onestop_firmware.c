@@ -365,10 +365,13 @@ static uint32_t boot_kernel_helper(struct os_storage *oss)
  * This is the main entry point of recovery boot flow. It never returns to its
  * caller.
  *
- * @param reason - recovery reason
+ * @param oss		OS storage interface
+ * @param cdata		kernel shared data pointer
+ * @param reason	recovery reason
+ * @param wait_for_unplug wait until user unplugs SD/USB before continuing
  */
 static void recovery_boot(struct os_storage *oss, crossystem_data_t *cdata,
-		uint32_t reason)
+		uint32_t reason, int wait_for_unplug)
 {
 	VBDEBUG(PREFIX "recovery boot\n");
 
@@ -382,8 +385,7 @@ static void recovery_boot(struct os_storage *oss, crossystem_data_t *cdata,
 			RECOVERY_TYPE);
 	crossystem_data_set_recovery_reason(cdata, reason);
 
-	/* can we remove this if? What is it for? */
-	if (!(_state.boot_flags & BOOT_FLAG_DEVELOPER)) {
+	if (wait_for_unplug) {
 		/* wait user unplugging external storage device */
 		while (os_storage_is_any_storage_device_plugged(
 				oss, NOT_BOOT_PROBED_DEVICE)) {
@@ -590,7 +592,8 @@ int do_cros_onestop_firmware(cmd_tbl_t *cmdtp, int flag, int argc,
 	if (reason == VBNV_COMMAND_PROMPT)
 		return 0;
 	if (reason != REBOOT_TO_CURRENT_MODE)
-		recovery_boot(&os_storage, &_state.cdata, reason);
+		recovery_boot(&os_storage, &_state.cdata, reason,
+			      _state.boot_flags & BOOT_FLAG_DEVELOPER);
 	cold_reboot();
 	return 0;
 }
