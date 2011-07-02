@@ -879,6 +879,17 @@ static int clock_set_rate(enum clock_id clkid, u32 n, u32 m, u32 p, u32 cpcon)
 	return 0;
 }
 
+int check_is_tegra2_cold_boot(void)
+{
+	u32 base_reg;
+	struct clk_pll *pll;
+
+	pll = get_pll(CLOCK_ID_PERIPH);
+	base_reg = readl(&pll->pll_base);
+
+	return (base_reg & bf_mask(PLL_BASE_OVRRIDE)) ? 0 : 1;
+}
+
 void common_pll_init(void)
 {
 	/*
