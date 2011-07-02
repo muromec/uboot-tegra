@@ -14,6 +14,12 @@
 #include <linux/types.h>
 #include <part.h>
 
+/* Information about the current OS storage device */
+struct os_storage {
+	block_dev_desc_t *dev_desc;
+	ulong offset, limit;
+};
+
 /* Set boot device.
  *
  * Set partition number in argument part (starting from 1).  Pass part=0 for

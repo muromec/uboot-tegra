@@ -23,10 +23,7 @@
 
 #define BACKUP_LBA_OFFSET 0x20
 
-static struct {
-	block_dev_desc_t *dev_desc;
-	ulong offset, limit;
-} bootdev_config = {
+static struct os_storage bootdev_config = {
 	.dev_desc = NULL,
 	.offset = 0u,
 	.limit = 0u
