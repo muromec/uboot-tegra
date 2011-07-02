@@ -57,7 +57,6 @@ static struct internal_state_t {
 	crossystem_data_t cdata;
 	uint8_t gbb_data[CONFIG_LENGTH_GBB];
 	uint8_t key_block_buffer[CONFIG_LENGTH_VBLOCK_A];
-	struct os_storage os_storage;
 } _state;
 
 /**
@@ -152,10 +151,13 @@ static uint32_t init_internal_state_bottom_half(crossystem_data_t *cdata,
 /**
  * This initializes global variable [_state] and crossystem data.
  *
+ * @param cdata		pointer to kernel shared data
+ * @param dev_mode	set to 1 if in developer mode, 0 if not
  * @return VBNV_RECOVERY_NOT_REQUESTED if it succeeds; recovery reason if it
  *         fails
  */
-static uint32_t init_internal_state(crossystem_data_t *cdata, int *dev_mode)
+static uint32_t init_internal_state(crossystem_data_t *cdata, int *dev_mode,
+		struct os_storage *oss)
 {
 	uint32_t reason;
 
@@ -384,7 +386,7 @@ static void recovery_boot(struct os_storage *oss, crossystem_data_t *cdata,
 	if (!(_state.boot_flags & BOOT_FLAG_DEVELOPER)) {
 		/* wait user unplugging external storage device */
 		while (os_storage_is_any_storage_device_plugged(
-				&_state.os_storage, NOT_BOOT_PROBED_DEVICE)) {
+				oss, NOT_BOOT_PROBED_DEVICE)) {
 			show_screen(SCREEN_RECOVERY_MODE);
 			udelay(WAIT_MS_BETWEEN_PROBING * 1000);
 		}
@@ -393,7 +395,7 @@ static void recovery_boot(struct os_storage *oss, crossystem_data_t *cdata,
 	for (;;) {
 		/* Wait for user to plug in SD card or USB storage device */
 		while (!os_storage_is_any_storage_device_plugged(
-				&_state.os_storage, BOOT_PROBED_DEVICE)) {
+				oss, BOOT_PROBED_DEVICE)) {
 			show_screen(SCREEN_RECOVERY_MISSING_OS);
 			udelay(WAIT_MS_BETWEEN_PROBING * 1000);
 		}
@@ -404,7 +406,7 @@ static void recovery_boot(struct os_storage *oss, crossystem_data_t *cdata,
 		boot_kernel_helper(oss);
 
 		while (os_storage_is_any_storage_device_plugged(
-				&_state.os_storage, NOT_BOOT_PROBED_DEVICE)) {
+				oss, NOT_BOOT_PROBED_DEVICE)) {
 			show_screen(SCREEN_RECOVERY_NO_OS);
 			udelay(WAIT_MS_SHOW_ERROR * 1000);
 		}
@@ -525,6 +527,7 @@ static uint32_t normal_boot(struct os_storage *oss)
 {
 	VBDEBUG(PREFIX "boot from internal storage\n");
 
+	/* TODO(sjg) get from fdt */
 	if (os_storage_set_bootdev(oss, "mmc", MMC_INTERNAL_DEVICE, 0)) {
 		VBDEBUG(PREFIX "set_bootdev mmc_internal_device fail\n");
 		return VBNV_RECOVERY_RW_NO_OS;
@@ -549,7 +552,7 @@ static unsigned onestop_boot(struct os_storage *oss, crossystem_data_t *cdata)
 	int dev_mode;
 
 	/* Work through our initialization one step at a time */
-	reason = init_internal_state(cdata, &dev_mode);
+	reason = init_internal_state(cdata, &dev_mode, oss);
 	if (reason == VBNV_RECOVERY_NOT_REQUESTED)
 		reason = _state.recovery_request;
 
