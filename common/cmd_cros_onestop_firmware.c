@@ -57,6 +57,7 @@ static struct internal_state_t {
 	crossystem_data_t cdata;
 	uint8_t gbb_data[CONFIG_LENGTH_GBB];
 	uint8_t key_block_buffer[CONFIG_LENGTH_VBLOCK_A];
+	struct os_storage os_storage;
 } _state;
 
 /**
@@ -179,7 +180,8 @@ static uint32_t init_internal_state(crossystem_data_t *cdata, int *dev_mode)
 	}
 
 	/* initialize mmc and load nvcontext */
-	if (os_storage_initialize_mmc_device(MMC_INTERNAL_DEVICE)) {
+	if (os_storage_initialize_mmc_device(&_state.os_storage,
+			MMC_INTERNAL_DEVICE)) {
 		VBDEBUG(PREFIX "mmc %d init fail\n", MMC_INTERNAL_DEVICE);
 		return VBNV_RECOVERY_RO_UNSPECIFIED;
 	}
@@ -328,13 +330,13 @@ static void show_screen(ScreenIndex screen)
  *
  * @return recvoery reason or REBOOT_TO_CURRENT_MODE
  */
-static uint32_t boot_kernel_helper(void)
+static uint32_t boot_kernel_helper(struct os_storage *oss)
 {
 	int status;
 
 	crossystem_data_dump(&_state.cdata);
 
-	status = boot_kernel(_state.boot_flags,
+	status = boot_kernel(oss, _state.boot_flags,
 			_state.gbb_data, CONFIG_LENGTH_GBB,
 			_state.shared, VB_SHARED_DATA_REC_SIZE,
 			&_state.nvcxt, &_state.cdata);
@@ -363,7 +365,8 @@ static uint32_t boot_kernel_helper(void)
  *
  * @param reason - recovery reason
  */
-static void recovery_boot(crossystem_data_t *cdata, uint32_t reason)
+static void recovery_boot(struct os_storage *oss, crossystem_data_t *cdata,
+		uint32_t reason)
 {
 	VBDEBUG(PREFIX "recovery boot\n");
 
@@ -381,7 +384,7 @@ static void recovery_boot(crossystem_data_t *cdata, uint32_t reason)
 	if (!(_state.boot_flags & BOOT_FLAG_DEVELOPER)) {
 		/* wait user unplugging external storage device */
 		while (os_storage_is_any_storage_device_plugged(
-				NOT_BOOT_PROBED_DEVICE)) {
+				&_state.os_storage, NOT_BOOT_PROBED_DEVICE)) {
 			show_screen(SCREEN_RECOVERY_MODE);
 			udelay(WAIT_MS_BETWEEN_PROBING * 1000);
 		}
@@ -390,7 +393,7 @@ static void recovery_boot(crossystem_data_t *cdata, uint32_t reason)
 	for (;;) {
 		/* Wait for user to plug in SD card or USB storage device */
 		while (!os_storage_is_any_storage_device_plugged(
-				BOOT_PROBED_DEVICE)) {
+				&_state.os_storage, BOOT_PROBED_DEVICE)) {
 			show_screen(SCREEN_RECOVERY_MISSING_OS);
 			udelay(WAIT_MS_BETWEEN_PROBING * 1000);
 		}
@@ -398,10 +401,10 @@ static void recovery_boot(crossystem_data_t *cdata, uint32_t reason)
 		clear_screen();
 
 		/* even if it fails, we simply don't care */
-		boot_kernel_helper();
+		boot_kernel_helper(oss);
 
 		while (os_storage_is_any_storage_device_plugged(
-				NOT_BOOT_PROBED_DEVICE)) {
+				&_state.os_storage, NOT_BOOT_PROBED_DEVICE)) {
 			show_screen(SCREEN_RECOVERY_NO_OS);
 			udelay(WAIT_MS_SHOW_ERROR * 1000);
 		}
@@ -444,7 +447,7 @@ static uint32_t rewritable_boot_init(crossystem_data_t *cdata, int boot_type)
  * @return VBNV_RECOVERY_NOT_REQUESTED when caller has to boot from internal
  *         storage device; recovery reason when caller has to go to recovery.
  */
-static uint32_t developer_boot(void)
+static uint32_t developer_boot(struct os_storage *oss)
 {
 	ulong start = 0, time = 0, last_time = 0;
 	int c, is_after_20_seconds = 0;
@@ -489,8 +492,8 @@ static uint32_t developer_boot(void)
 		case KEY_BOOT_EXTERNAL:
 			/* even if boot_kernel_helper fails, we don't care */
 			if (os_storage_is_any_storage_device_plugged(
-					BOOT_PROBED_DEVICE))
-				boot_kernel_helper();
+					oss, BOOT_PROBED_DEVICE))
+				boot_kernel_helper(oss);
 			beep();
 			break;
 
@@ -518,16 +521,16 @@ static uint32_t developer_boot(void)
  *
  * @return recovery reason or REBOOT_TO_CURRENT_MODE
  */
-static uint32_t normal_boot(void)
+static uint32_t normal_boot(struct os_storage *oss)
 {
 	VBDEBUG(PREFIX "boot from internal storage\n");
 
-	if (os_storage_set_bootdev("mmc", MMC_INTERNAL_DEVICE, 0)) {
+	if (os_storage_set_bootdev(oss, "mmc", MMC_INTERNAL_DEVICE, 0)) {
 		VBDEBUG(PREFIX "set_bootdev mmc_internal_device fail\n");
 		return VBNV_RECOVERY_RW_NO_OS;
 	}
 
-	return boot_kernel_helper();
+	return boot_kernel_helper(oss);
 }
 
 /**
@@ -540,7 +543,7 @@ static uint32_t normal_boot(void)
  *	REBOOT_TO_CURRENT_MODE	Reboot
  *	anything else		Go into recovery
  */
-static unsigned onestop_boot(crossystem_data_t *cdata)
+static unsigned onestop_boot(struct os_storage *oss, crossystem_data_t *cdata)
 {
 	unsigned reason = VBNV_RECOVERY_NOT_REQUESTED;
 	int dev_mode;
@@ -559,14 +562,14 @@ static unsigned onestop_boot(crossystem_data_t *cdata)
 
 	if (reason == VBNV_RECOVERY_NOT_REQUESTED) {
 		if (dev_mode)
-			reason = developer_boot();
+			reason = developer_boot(oss);
 
 		/*
 		* If developer boot flow exits normally or is not requested,
 		* try normal boot flow.
 		*/
 		if (reason == VBNV_RECOVERY_NOT_REQUESTED)
-			reason = normal_boot();
+			reason = normal_boot(oss);
 	}
 
 	/* Give up and fall through to recovery */
@@ -577,13 +580,14 @@ int do_cros_onestop_firmware(cmd_tbl_t *cmdtp, int flag, int argc,
 		char * const argv[])
 {
 	unsigned reason;
+	struct os_storage os_storage;
 
 	clear_screen();
-	reason = onestop_boot(&_state.cdata);
+	reason = onestop_boot(&os_storage, &_state.cdata);
 	if (reason == VBNV_COMMAND_PROMPT)
 		return 0;
 	if (reason != REBOOT_TO_CURRENT_MODE)
-		recovery_boot(&_state.cdata, reason);
+		recovery_boot(&os_storage, &_state.cdata, reason);
 	cold_reboot();
 	return 0;
 }

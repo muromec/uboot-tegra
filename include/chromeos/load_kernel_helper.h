@@ -20,6 +20,7 @@
  * by set_bootdev. The caller of this functions must have called set_bootdev
  * first.
  *
+ * @param oss OS storage pointer, used to access boot disk
  * @param boot_flags are bitwise-or'ed of flags in load_kernel_fw.h
  * @param gbb_data points to a GBB blob
  * @param gbb_size is the size of the GBB blob
@@ -31,7 +32,8 @@
  *         fails or the kernel is not bootable; otherwise, this function
  *         boots the kernel and never returns to its caller
  */
-int boot_kernel(uint64_t boot_flags,
+struct os_storage;
+int boot_kernel(struct os_storage *oss, uint64_t boot_flags,
 		void *gbb_data, uint32_t gbb_size,
 		void *vbshared_data, uint32_t vbshared_size,
 		VbNvContext *nvcxt, crossystem_data_t *cdata);

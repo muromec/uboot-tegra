@@ -26,6 +26,7 @@ int do_bootm(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]);
  * by set_bootdev. The caller of this functions must have called set_bootdev
  * first.
  *
+ * @param oss is the OS storage interface, for reading from the boot disk
  * @param boot_flags are bitwise-or'ed of flags in load_kernel_fw.h
  * @param gbb_data points to a GBB blob
  * @param gbb_size is the size of the GBB blob
@@ -34,7 +35,8 @@ int do_bootm(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]);
  * @param nvcxt points to a VbNvContext object
  * @return LoadKernel's return value
  */
-static int load_kernel_wrapper(LoadKernelParams *params, uint64_t boot_flags,
+static int load_kernel_wrapper(struct os_storage *oss,
+		LoadKernelParams *params, uint64_t boot_flags,
 		void *gbb_data, uint32_t gbb_size,
 		void *vbshared_data, uint32_t vbshared_size,
 		VbNvContext *nvcxt)
@@ -51,8 +53,8 @@ static int load_kernel_wrapper(LoadKernelParams *params, uint64_t boot_flags,
 	params->shared_data_blob = vbshared_data;
 	params->shared_data_size = vbshared_size;
 
-	params->bytes_per_lba = os_storage_get_bytes_per_lba();
-	params->ending_lba = os_storage_get_ending_lba();
+	params->bytes_per_lba = os_storage_get_bytes_per_lba(oss);
+	params->ending_lba = os_storage_get_ending_lba(oss);
 
 	params->kernel_buffer = (void*)CONFIG_CHROMEOS_KERNEL_LOADADDR;
 	params->kernel_buffer_size = CONFIG_CHROMEOS_KERNEL_BUFSIZE;
@@ -223,11 +225,12 @@ static void update_cmdline(char *src, int devnum, int partnum, uint8_t *guid,
 /**
  * This boots kernel specified in [parmas].
  *
+ * @param oss is the OS storage interface, for reading from the boot disk
  * @param params that specifies where to boot from
  * @return LOAD_KERNEL_INVALID if it fails to boot; otherwise it never returns
  *         to its caller
  */
-static int boot_kernel_helper(LoadKernelParams *params)
+static int boot_kernel_helper(struct os_storage *oss, LoadKernelParams *params)
 {
 	char cmdline_buf[CROS_CONFIG_SIZE + 4096];
 	char cmdline_out[CROS_CONFIG_SIZE + 4096];
@@ -255,7 +258,7 @@ static int boot_kernel_helper(LoadKernelParams *params)
 		strcat(cmdline_buf, cmdline);
 
 	VBDEBUG(PREFIX "cmdline before update: %s\n", cmdline_buf);
-	update_cmdline(cmdline_buf, os_storage_get_device_number(),
+	update_cmdline(cmdline_buf, os_storage_get_device_number(oss),
 			params->partition_number + 1, params->partition_guid,
 			cmdline_out);
 
@@ -275,7 +278,7 @@ static int boot_kernel_helper(LoadKernelParams *params)
 	return LOAD_KERNEL_INVALID;
 }
 
-int boot_kernel(uint64_t boot_flags,
+int boot_kernel(struct os_storage *oss, uint64_t boot_flags,
 		void *gbb_data, uint32_t gbb_size,
 		void *vbshared_data, uint32_t vbshared_size,
 		VbNvContext *nvcxt, crossystem_data_t *cdata)
@@ -283,8 +286,8 @@ int boot_kernel(uint64_t boot_flags,
 	LoadKernelParams params;
 	int status;
 
-	status = load_kernel_wrapper(&params, boot_flags, gbb_data, gbb_size,
-			vbshared_data, vbshared_size, nvcxt);
+	status = load_kernel_wrapper(oss, &params, boot_flags, gbb_data,
+			gbb_size, vbshared_data, vbshared_size, nvcxt);
 
 	VBDEBUG(PREFIX "load_kernel_wrapper returns %d\n", status);
 
@@ -298,7 +301,7 @@ int boot_kernel(uint64_t boot_flags,
 		VBDEBUG(PREFIX "fail to write back nvcontext\n");
 
 	if (status == LOAD_KERNEL_SUCCESS)
-		return boot_kernel_helper(&params);
+		return boot_kernel_helper(oss, &params);
 
 	return status;
 }
