@@ -51,8 +51,8 @@ static int load_kernel_wrapper(LoadKernelParams *params, uint64_t boot_flags,
 	params->shared_data_blob = vbshared_data;
 	params->shared_data_size = vbshared_size;
 
-	params->bytes_per_lba = get_bytes_per_lba();
-	params->ending_lba = get_ending_lba();
+	params->bytes_per_lba = os_storage_get_bytes_per_lba();
+	params->ending_lba = os_storage_get_ending_lba();
 
 	params->kernel_buffer = (void*)CONFIG_CHROMEOS_KERNEL_LOADADDR;
 	params->kernel_buffer_size = CONFIG_CHROMEOS_KERNEL_BUFSIZE;
@@ -255,7 +255,7 @@ static int boot_kernel_helper(LoadKernelParams *params)
 		strcat(cmdline_buf, cmdline);
 
 	VBDEBUG(PREFIX "cmdline before update: %s\n", cmdline_buf);
-	update_cmdline(cmdline_buf, get_device_number(),
+	update_cmdline(cmdline_buf, os_storage_get_device_number(),
 			params->partition_number + 1, params->partition_guid,
 			cmdline_out);
 

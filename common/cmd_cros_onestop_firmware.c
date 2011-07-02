@@ -179,7 +179,7 @@ static uint32_t init_internal_state(crossystem_data_t *cdata, int *dev_mode)
 	}
 
 	/* initialize mmc and load nvcontext */
-	if (initialize_mmc_device(MMC_INTERNAL_DEVICE)) {
+	if (os_storage_initialize_mmc_device(MMC_INTERNAL_DEVICE)) {
 		VBDEBUG(PREFIX "mmc %d init fail\n", MMC_INTERNAL_DEVICE);
 		return VBNV_RECOVERY_RO_UNSPECIFIED;
 	}
@@ -380,7 +380,8 @@ static void recovery_boot(crossystem_data_t *cdata, uint32_t reason)
 	/* can we remove this if? What is it for? */
 	if (!(_state.boot_flags & BOOT_FLAG_DEVELOPER)) {
 		/* wait user unplugging external storage device */
-		while (is_any_storage_device_plugged(NOT_BOOT_PROBED_DEVICE)) {
+		while (os_storage_is_any_storage_device_plugged(
+				NOT_BOOT_PROBED_DEVICE)) {
 			show_screen(SCREEN_RECOVERY_MODE);
 			udelay(WAIT_MS_BETWEEN_PROBING * 1000);
 		}
@@ -388,7 +389,8 @@ static void recovery_boot(crossystem_data_t *cdata, uint32_t reason)
 
 	for (;;) {
 		/* Wait for user to plug in SD card or USB storage device */
-		while (!is_any_storage_device_plugged(BOOT_PROBED_DEVICE)) {
+		while (!os_storage_is_any_storage_device_plugged(
+				BOOT_PROBED_DEVICE)) {
 			show_screen(SCREEN_RECOVERY_MISSING_OS);
 			udelay(WAIT_MS_BETWEEN_PROBING * 1000);
 		}
@@ -398,7 +400,8 @@ static void recovery_boot(crossystem_data_t *cdata, uint32_t reason)
 		/* even if it fails, we simply don't care */
 		boot_kernel_helper();
 
-		while (is_any_storage_device_plugged(NOT_BOOT_PROBED_DEVICE)) {
+		while (os_storage_is_any_storage_device_plugged(
+				NOT_BOOT_PROBED_DEVICE)) {
 			show_screen(SCREEN_RECOVERY_NO_OS);
 			udelay(WAIT_MS_SHOW_ERROR * 1000);
 		}
@@ -485,7 +488,8 @@ static uint32_t developer_boot(void)
 		/* load and boot kernel from USB or SD card */
 		case KEY_BOOT_EXTERNAL:
 			/* even if boot_kernel_helper fails, we don't care */
-			if (is_any_storage_device_plugged(BOOT_PROBED_DEVICE))
+			if (os_storage_is_any_storage_device_plugged(
+					BOOT_PROBED_DEVICE))
 				boot_kernel_helper();
 			beep();
 			break;
@@ -518,7 +522,7 @@ static uint32_t normal_boot(void)
 {
 	VBDEBUG(PREFIX "boot from internal storage\n");
 
-	if (set_bootdev("mmc", MMC_INTERNAL_DEVICE, 0)) {
+	if (os_storage_set_bootdev("mmc", MMC_INTERNAL_DEVICE, 0)) {
 		VBDEBUG(PREFIX "set_bootdev mmc_internal_device fail\n");
 		return VBNV_RECOVERY_RW_NO_OS;
 	}

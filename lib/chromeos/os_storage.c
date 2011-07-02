@@ -29,27 +29,33 @@ static struct os_storage bootdev_config = {
 	.limit = 0u
 };
 
-block_dev_desc_t *get_bootdev(void)
+static int os_storage_BootDeviceReadLBA(uint64_t lba_start, uint64_t lba_count,
+		void *buffer);
+static int os_storage_BootDeviceWriteLBA(uint64_t lba_start, uint64_t lba_count,
+		const void *buffer);
+
+
+block_dev_desc_t *os_storage_get_bootdev(void)
 {
 	return bootdev_config.dev_desc;
 }
 
-int get_device_number(void)
+int os_storage_get_device_number(void)
 {
 	return bootdev_config.dev_desc->dev;
 }
 
-ulong get_offset(void)
+ulong os_storage_get_offset(void)
 {
 	return bootdev_config.offset;
 }
 
-ulong get_limit(void)
+ulong os_storage_get_limit(void)
 {
 	return bootdev_config.limit;
 }
 
-uint64_t get_bytes_per_lba(void)
+uint64_t os_storage_get_bytes_per_lba(void)
 {
 	if (!bootdev_config.dev_desc) {
 		VBDEBUG(PREFIX "get_bytes_per_lba: not dev_desc set\n");
@@ -59,13 +65,13 @@ uint64_t get_bytes_per_lba(void)
 	return (uint64_t) bootdev_config.dev_desc->blksz;
 }
 
-uint64_t get_ending_lba(void)
+uint64_t os_storage_get_ending_lba(void)
 {
 	uint8_t static_buf[512];
 	uint8_t *buf = NULL;
 	uint64_t ret = ~0ULL, bytes_per_lba = ~0ULL;
 
-	bytes_per_lba = get_bytes_per_lba();
+	bytes_per_lba = os_storage_get_bytes_per_lba();
 	if (bytes_per_lba == ~0ULL) {
 		VBDEBUG(PREFIX "get_ending_lba: get bytes_per_lba fail\n");
 		goto EXIT;
@@ -76,7 +82,7 @@ uint64_t get_ending_lba(void)
 	else
 		buf = static_buf;
 
-	if (BootDeviceReadLBA(1, 1, buf)) {
+	if (os_storage_BootDeviceReadLBA(1, 1, buf)) {
 		VBDEBUG(PREFIX "get_ending_lba: read primary GPT header fail\n");
 		goto EXIT;
 	}
@@ -90,7 +96,7 @@ EXIT:
 	return ret;
 }
 
-int set_bootdev(char *ifname, int dev, int part)
+int os_storage_set_bootdev(char *ifname, int dev, int part)
 {
 	disk_partition_t part_info;
 
@@ -122,7 +128,8 @@ cleanup:
 	return 1;
 }
 
-int BootDeviceReadLBA(uint64_t lba_start, uint64_t lba_count, void *buffer)
+static int os_storage_BootDeviceReadLBA(uint64_t lba_start, uint64_t lba_count,
+		void *buffer)
 {
 	block_dev_desc_t *dev_desc;
 
@@ -140,7 +147,7 @@ int BootDeviceReadLBA(uint64_t lba_start, uint64_t lba_count, void *buffer)
 	return 0;
 }
 
-int BootDeviceWriteLBA(uint64_t lba_start, uint64_t lba_count,
+static int os_storage_BootDeviceWriteLBA(uint64_t lba_start, uint64_t lba_count,
 		const void *buffer)
 {
 	block_dev_desc_t *dev_desc;
@@ -159,7 +166,7 @@ int BootDeviceWriteLBA(uint64_t lba_start, uint64_t lba_count,
 	return 0;
 }
 
-int initialize_mmc_device(int dev)
+int os_storage_initialize_mmc_device(int dev)
 {
 	struct mmc *mmc;
 	int err;
@@ -178,7 +185,19 @@ int initialize_mmc_device(int dev)
 	return 0;
 }
 
-int is_mmc_storage_present(int mmc_device_number)
+/* For vboot (pre re-factor) */
+int BootDeviceReadLBA(uint64_t lba_start, uint64_t lba_count, void *buffer)
+{
+	return os_storage_BootDeviceReadLBA(lba_start, lba_count, buffer);
+}
+
+int BootDeviceWriteLBA(uint64_t lba_start, uint64_t lba_count,
+		const void *buffer)
+{
+	return os_storage_BootDeviceWriteLBA(lba_start, lba_count, buffer);
+}
+
+int os_storage_is_mmc_storage_present(int mmc_device_number)
 {
 	/*
 	 * mmc_init tests the SD card's version and tries its operating
@@ -189,7 +208,7 @@ int is_mmc_storage_present(int mmc_device_number)
 	return mmc != NULL && mmc_init(mmc) == 0;
 }
 
-int is_usb_storage_present(void)
+int os_storage_is_usb_storage_present(void)
 {
 	/* TODO(waihong): Better way to probe USB than restart it */
 	usb_stop();
@@ -201,32 +220,33 @@ int is_usb_storage_present(void)
 	return 1;
 }
 
-int is_any_storage_device_plugged(int boot_probed_device)
+int os_storage_is_any_storage_device_plugged(int boot_probed_device)
 {
 	VBDEBUG(PREFIX "probe external mmc\n");
-	if (is_mmc_storage_present(MMC_EXTERNAL_DEVICE)) {
+	if (os_storage_is_mmc_storage_present(MMC_EXTERNAL_DEVICE)) {
 		if (boot_probed_device == NOT_BOOT_PROBED_DEVICE) {
 			VBDEBUG(PREFIX "probed external mmc\n");
 			return 1;
 		}
 
 		VBDEBUG(PREFIX "try to set boot device to external mmc\n");
-		if (!initialize_mmc_device(MMC_EXTERNAL_DEVICE) &&
-				!set_bootdev("mmc", MMC_EXTERNAL_DEVICE, 0)) {
+		if (!os_storage_initialize_mmc_device(MMC_EXTERNAL_DEVICE) &&
+				!os_storage_set_bootdev("mmc",
+						MMC_EXTERNAL_DEVICE, 0)) {
 			VBDEBUG(PREFIX "set external mmc as boot device\n");
 			return 1;
 		}
 	}
 
 	VBDEBUG(PREFIX "probe usb\n");
-	if (is_usb_storage_present()) {
+	if (os_storage_is_usb_storage_present()) {
 		if (boot_probed_device == NOT_BOOT_PROBED_DEVICE) {
 			VBDEBUG(PREFIX "probed usb\n");
 			return 1;
 		}
 
 		VBDEBUG(PREFIX "try to set boot device to usb\n");
-		if (!set_bootdev("usb", 0, 0)) {
+		if (!os_storage_set_bootdev("usb", 0, 0)) {
 			VBDEBUG(PREFIX "set usb as boot device\n");
 			return 1;
 		}
