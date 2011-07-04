@@ -243,11 +243,15 @@ void bootstub_entry(void)
 	/* Handle the VbSelectFirmware() results */
 	switch (fparams.selected_firmware) {
 	case VB_SELECT_FIRMWARE_A:
-		jump_to_firmware((firmware_entry_t)cache.infos[0].buffer);
+		memcpy((void *)CONFIG_SYS_TEXT_BASE, cache.infos[0].buffer,
+				cache.infos[0].size);
+		jump_to_firmware((firmware_entry_t)CONFIG_SYS_TEXT_BASE);
 		break;
 
 	case VB_SELECT_FIRMWARE_B:
-		jump_to_firmware((firmware_entry_t)cache.infos[1].buffer);
+		memcpy((void *)CONFIG_SYS_TEXT_BASE, cache.infos[1].buffer,
+				cache.infos[1].size);
+		jump_to_firmware((firmware_entry_t)CONFIG_SYS_TEXT_BASE);
 		break;
 
 	case VB_SELECT_FIRMWARE_RECOVERY:
