@@ -10,6 +10,7 @@
 
 #include <common.h>
 #include <chromeos/common.h>
+#include <chromeos/crossystem_data.h>
 #include <chromeos/load_kernel_helper.h>
 #include <chromeos/os_storage.h>
 #include <chromeos/vboot_nvstorage_helper.h>
@@ -17,6 +18,12 @@
 #include <load_kernel_fw.h>
 
 #define PREFIX "load_kernel_helper: "
+
+/*
+ * boot_kernel_helper() uses a static global variable to communicate with
+ * fit_update_fdt_before_boot(). For more information, please see commit log.
+ */
+static crossystem_data_t *g_crossystem_data = NULL;
 
 /* defined in common/cmd_bootm.c */
 int do_bootm(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]);
@@ -223,26 +230,21 @@ static void update_cmdline(char *src, int devnum, int partnum, uint8_t *guid,
 }
 
 /**
- * This boots kernel specified in [parmas].
+ * This sets up bootargs environment variable.
  *
  * @param oss is the OS storage interface, for reading from the boot disk
  * @param params that specifies where to boot from
  * @return LOAD_KERNEL_INVALID if it fails to boot; otherwise it never returns
  *         to its caller
  */
-static int boot_kernel_helper(struct os_storage *oss, LoadKernelParams *params)
+static int setup_kernel_command_line(struct os_storage *oss,
+		LoadKernelParams *params)
 {
-	char cmdline_buf[CROS_CONFIG_SIZE + 4096];
-	char cmdline_out[CROS_CONFIG_SIZE + 4096];
-	char load_address[32];
-	char *argv[2] = { "bootm", load_address };
-	char *cmdline;
+	enum { EXTRA_BUFFER = 4096 };
 
-	VBDEBUG(PREFIX "boot_kernel\n");
-	VBDEBUG(PREFIX "kernel_buffer:      0x%p\n",
-			params->kernel_buffer);
-	VBDEBUG(PREFIX "bootloader_address: 0x%08x\n",
-			(int) params->bootloader_address);
+	char cmdline_buf[CROS_CONFIG_SIZE + EXTRA_BUFFER];
+	char cmdline_out[CROS_CONFIG_SIZE + EXTRA_BUFFER];
+	char *cmdline;
 
 	/*
 	 * casting bootloader_address of uint64_t type to uint32_t before
@@ -254,8 +256,10 @@ static int boot_kernel_helper(struct os_storage *oss, LoadKernelParams *params)
 	strncpy(cmdline_buf, cmdline, CROS_CONFIG_SIZE);
 
 	/* if we have init bootargs, append it */
-	if ((cmdline = getenv("bootargs")))
-		strcat(cmdline_buf, cmdline);
+	if ((cmdline = getenv("bootargs"))) {
+		strncat(cmdline_buf, " ", EXTRA_BUFFER);
+		strncat(cmdline_buf, cmdline, EXTRA_BUFFER - 1);
+	}
 
 	VBDEBUG(PREFIX "cmdline before update: %s\n", cmdline_buf);
 	update_cmdline(cmdline_buf, os_storage_get_device_number(oss),
@@ -265,16 +269,41 @@ static int boot_kernel_helper(struct os_storage *oss, LoadKernelParams *params)
 	setenv("bootargs", cmdline_out);
 	VBDEBUG(PREFIX "cmdline after update:  %s\n", getenv("bootargs"));
 
-	/*
-	 * TODO(clchiou): we probably should minimize calls to other u-boot
-	 * commands inside verified boot for security reasons?
-	 */
+	return 0;
+}
+
+/**
+ * This boots kernel specified in [parmas].
+ *
+ * @param oss		OS storage interface
+ * @param params	Specifies where to boot from
+ * @param cdata		kernel shared data pointer
+ * @return LOAD_KERNEL_INVALID if it fails to boot; otherwise it never returns
+ *         to its caller
+ */
+static int boot_kernel_helper(struct os_storage *oss, LoadKernelParams *params,
+		crossystem_data_t *cdata)
+{
+	char load_address[32];
+	char *argv[2] = { "bootm", load_address };
+
+	VBDEBUG(PREFIX "boot_kernel\n");
+	VBDEBUG(PREFIX "kernel_buffer:      0x%p\n",
+			params->kernel_buffer);
+	VBDEBUG(PREFIX "bootloader_address: 0x%08x\n",
+			(int) params->bootloader_address);
+
+	if (setup_kernel_command_line(oss, params)) {
+		VBDEBUG(PREFIX "failed to set up kernel command-line\n");
+		return LOAD_KERNEL_INVALID;
+	}
+
+	g_crossystem_data = cdata;
+
 	sprintf(load_address, "0x%p", params->kernel_buffer);
-	VBDEBUG(PREFIX "run command: %s %s\n", argv[0], argv[1]);
 	do_bootm(NULL, 0, sizeof(argv)/sizeof(*argv), argv);
 
-	/* should never reach here! */
-	VBDEBUG(PREFIX "error: do_bootm() returned\n");
+	VBDEBUG(PREFIX "failed to boot; is kernel broken?\n");
 	return LOAD_KERNEL_INVALID;
 }
 
@@ -301,7 +330,25 @@ int boot_kernel(struct os_storage *oss, uint64_t boot_flags,
 		VBDEBUG(PREFIX "fail to write back nvcontext\n");
 
 	if (status == LOAD_KERNEL_SUCCESS)
-		return boot_kernel_helper(oss, &params);
+		return boot_kernel_helper(oss, &params, cdata);
 
 	return status;
+}
+
+int fit_update_fdt_before_boot(char *fdt, ulong *new_size)
+{
+	uint32_t ns;
+
+	if (!g_crossystem_data) {
+		VBDEBUG(PREFIX "warning: g_crossystem_data is NULL\n");
+		return 1;
+	}
+
+	if (crossystem_data_embed_into_fdt(g_crossystem_data, fdt, &ns)) {
+		VBDEBUG(PREFIX "crossystem_data_embed_into_fdt() failed\n");
+		return 1;
+	}
+
+	*new_size = ns;
+	return 0;
 }

@@ -184,8 +184,7 @@ static uint32_t init_internal_state(firmware_storage_t *file,
 	}
 
 	/* initialize mmc and load nvcontext */
-	if (os_storage_initialize_mmc_device(&_state.os_storage,
-			MMC_INTERNAL_DEVICE)) {
+	if (os_storage_initialize_mmc_device(oss, MMC_INTERNAL_DEVICE)) {
 		VBDEBUG(PREFIX "mmc %d init fail\n", MMC_INTERNAL_DEVICE);
 		return VBNV_RECOVERY_RO_UNSPECIFIED;
 	}

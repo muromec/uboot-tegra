@@ -232,8 +232,9 @@ int os_storage_is_any_storage_device_plugged(struct os_storage *oss,
 		}
 
 		VBDEBUG(PREFIX "try to set boot device to external mmc\n");
-		if (!os_storage_initialize_mmc_device(MMC_EXTERNAL_DEVICE) &&
-				!os_storage_set_bootdev("mmc",
+		if (!os_storage_initialize_mmc_device(oss,
+					MMC_EXTERNAL_DEVICE) &&
+				!os_storage_set_bootdev(oss, "mmc",
 						MMC_EXTERNAL_DEVICE, 0)) {
 			VBDEBUG(PREFIX "set external mmc as boot device\n");
 			return 1;

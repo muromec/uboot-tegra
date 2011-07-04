@@ -29,6 +29,8 @@
 #define MMC_INTERNAL_DEVICE		0
 #define MMC_EXTERNAL_DEVICE		1
 
+#define CONFIG_OF_UPDATE_FDT_BEFORE_BOOT
+
 /* load bootcmd from fdt */
 #undef CONFIG_BOOTCOMMAND
 
