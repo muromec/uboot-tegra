@@ -25,7 +25,8 @@ vb_global_t *get_vboot_global(void)
 
 int init_vboot_global(vb_global_t *global, firmware_storage_t *file)
 {
-	uint8_t frid[ID_LEN], nvraw[VBNV_BLOCK_SIZE];
+	char frid[ID_LEN];
+	uint8_t nvraw[VBNV_BLOCK_SIZE];
 	int write_protect_sw, recovery_sw, developer_sw;
 
 	global->version = VBGLOBAL_VERSION;
@@ -56,14 +57,14 @@ int init_vboot_global(vb_global_t *global, firmware_storage_t *file)
 		return 1;
 	}
 
-	if (cros_ksd_init(&global->kshared_data, frid,
+	if (crossystem_data_init(&global->cdata_blob, frid,
 			CONFIG_OFFSET_FMAP, global->gbb_data, nvraw,
 			write_protect_sw, recovery_sw, developer_sw)) {
-		VbExDebug(PREFIX "Failed to init kernel shared data!\n");
+		VbExDebug(PREFIX "Failed to init crossystem data!\n");
 		return 1;
 	}
 
-	global->kshared_data_size = sizeof(KernelSharedDataType);
+	global->cdata_size = sizeof(crossystem_data_t);
 
 	return 0;
 }

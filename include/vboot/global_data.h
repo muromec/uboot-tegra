@@ -10,8 +10,8 @@
 
 /*
  * VBoot Global Data keeps the common data which can be shared between
- * different firmware variants, like the shared_data_blob between bootstub
- * and normal/developer firmware, the GBB data between bootstub and
+ * different firmware variants, like the crossystem data between bootstub,
+ * normal/developer firmware, and kernel, the GBB data between bootstub and
  * recovery/developer firmware. This data is stored in a fixed memory
  * address, a region just above the stack region, such that u-boot
  * with differnet symbol table can also locates it.
@@ -34,8 +34,8 @@ typedef struct {
 	uint32_t		version;
 	uint32_t		gbb_size;
 	uint8_t			gbb_data[CONFIG_LENGTH_GBB];
-	uint32_t		kshared_data_size;
-	crossystem_data_t	kshared_data;
+	uint32_t		cdata_size;
+	crossystem_data_t	cdata_blob;
 } vb_global_t;
 
 /* Get vboot global data pointer. */
