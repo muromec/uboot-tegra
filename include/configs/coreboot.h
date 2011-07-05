@@ -135,6 +135,7 @@
 #define CONFIG_CMD_IDE
 #define CONFIG_CMD_FAT
 #define CONFIG_CMD_EXT2
+#define CONFIG_CMD_USB
 
 #define CONFIG_BOOTDELAY			-1
 #define CONFIG_BOOTARGS				"console=uart8250,mmio,0xe0401000,115200n8 "\
@@ -230,6 +231,16 @@
  * PCI configuration
  */
 #define CONFIG_PCI
+
+/*-----------------------------------------------------------------------
+ * USB configuration
+ */
+#define CONFIG_USB_EHCI
+#define CONFIG_USB_EHCI_PCI
+#define CONFIG_SYS_USB_EHCI_MAX_ROOT_PORTS     8
+#define CONFIG_USB_STORAGE
+#define CONFIG_USB_HOST_ETHER
+#define CONFIG_USB_ETHER_ASIX
 
 /*-----------------------------------------------------------------------
  * Network device support
