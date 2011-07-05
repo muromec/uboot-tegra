@@ -8,8 +8,8 @@
  * Software Foundation.
  */
 
-#ifndef __CHROMEOS_KERNEL_SHARED_DATA_H__
-#define __CHROMEOS_KERNEL_SHARED_DATA_H__
+#ifndef __CHROMEOS_CROSSYSTEM_DATA_H__
+#define __CHROMEOS_CROSSYSTEM_DATA_H__
 
 #include <vboot_nvstorage.h>
 #include <vboot_struct.h>
@@ -94,6 +94,9 @@ int crossystem_data_set_fwid(crossystem_data_t *cdata, char *fwid);
 int crossystem_data_set_active_main_firmware(crossystem_data_t *cdata,
 		int which, int type);
 
+int crossystem_data_get_active_main_firmware(crossystem_data_t *cdata);
+int crossystem_data_get_active_main_firmware_type(crossystem_data_t *cdata);
+
 /**
  * This sets recovery reason.
  *
@@ -120,4 +123,4 @@ int crossystem_data_embed_into_fdt(crossystem_data_t *cdata, void *fdt,
  */
 void crossystem_data_dump(crossystem_data_t *cdata);
 
-#endif /* __CHROMEOS_KERNEL_SHARED_DATA_H__ */
+#endif /* __CHROMEOS_CROSSYSTEM_DATA_H__ */

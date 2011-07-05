@@ -10,10 +10,12 @@
 
 #include <common.h>
 #include <command.h>
-#include <lcd.h>
 #include <fdt_decode.h>
+#include <lcd.h>
+#include <malloc.h>
 #include <chromeos/common.h>
 #include <chromeos/crossystem_data.h>
+#include <chromeos/fdt_decode.h>
 #include <chromeos/firmware_storage.h>
 #include <chromeos/gbb_bmpblk.h>
 #include <chromeos/gpio.h>
@@ -54,8 +56,7 @@ static struct internal_state_t {
 	uint64_t boot_flags;
 	ScreenIndex current_screen;
 	crossystem_data_t cdata;
-	uint8_t gbb_data[CONFIG_LENGTH_GBB];
-	uint8_t key_block_buffer[CONFIG_LENGTH_VBLOCK_A];
+	uint8_t *gbb_data;
 } _state;
 
 DECLARE_GLOBAL_DATA_PTR;
@@ -118,8 +119,8 @@ static uint32_t init_internal_state_nvcontext(VbNvContext *nvcxt,
  *         fails
  */
 static uint32_t init_internal_state_bottom_half(firmware_storage_t *file,
-		void *fdt, crossystem_data_t *cdata, int *dev_mode,
-		VbNvContext *nvcxt)
+		struct fdt_onestop_fmap *fmap, void *fdt,
+		crossystem_data_t *cdata, int *dev_mode, VbNvContext *nvcxt)
 {
 	char frid[ID_LEN];
 	int write_protect_sw, recovery_sw, developer_sw;
@@ -158,13 +159,16 @@ static uint32_t init_internal_state_bottom_half(firmware_storage_t *file,
 		_state.boot_flags |= BOOT_FLAG_DEV_FIRMWARE;
 		*dev_mode = 1;
 	}
-	if (firmware_storage_read(file, CONFIG_OFFSET_RO_FRID,
-				CONFIG_LENGTH_RO_FRID, frid)) {
+
+	if (firmware_storage_read(file,
+				fmap->onestop_layout.fwid.offset,
+				fmap->onestop_layout.fwid.length,
+				frid)) {
 		VBDEBUG(PREFIX "read frid fail\n");
 		reason = VBNV_RECOVERY_RO_SHARED_DATA;
 	}
 
-	if (crossystem_data_init(cdata, frid, CONFIG_OFFSET_FMAP,
+	if (crossystem_data_init(cdata, frid, fmap->readonly.fmap.offset,
 				_state.gbb_data, nvcxt->raw,
 				write_protect_sw, recovery_sw, developer_sw,
 				polarity_write_protect_sw, polarity_recovery_sw,
@@ -184,6 +188,7 @@ static uint32_t init_internal_state_bottom_half(firmware_storage_t *file,
  * This initializes global variable [_state] and crossystem data.
  *
  * @param file		firmware storage interface
+ * @param fmap		flash map (fmap) blob
  * @param fdt		device tree blob
  * @param cdata		pointer to kernel shared data
  * @param dev_mode	set to 1 if in developer mode, 0 if not
@@ -191,6 +196,7 @@ static uint32_t init_internal_state_bottom_half(firmware_storage_t *file,
  *         fails
  */
 static uint32_t init_internal_state(firmware_storage_t *file,
+		struct fdt_onestop_fmap *fmap,
 		void *fdt, crossystem_data_t *cdata, int *dev_mode,
 		struct os_storage *oss, VbNvContext *nvcxt)
 {
@@ -201,16 +207,29 @@ static uint32_t init_internal_state(firmware_storage_t *file,
 	/* sad enough, SCREEN_BLANK != 0 */
 	_state.current_screen = SCREEN_BLANK;
 
+	if (fdt_decode_onestop_fmap(fdt, fmap)) {
+		VBDEBUG(PREFIX "fatal: fail to load fmap config from fdt\n");
+		return REBOOT_TO_CURRENT_MODE;
+	}
+	dump_fmap(fmap);
+
 	_state.shared = (VbSharedDataHeader *)cdata->vbshared_data;
-	_state.key_block = (VbKeyBlockHeader *)_state.key_block_buffer;
+	_state.key_block = malloc(fmap->onestop_layout.vblock.length);
+	_state.gbb_data = malloc(fmap->readonly.gbb.length);
+
+	if (!_state.key_block || !_state.gbb_data) {
+		VBDEBUG(PREFIX "fatal: malloc return NULL\n");
+		return REBOOT_TO_CURRENT_MODE;
+	}
 
 	/* open firmware storage device and load gbb */
-	if (firmware_storage_open_spi(file)) {
-		VBDEBUG(PREFIX "open_spi fail\n");
+	if (firmware_storage_open_onestop(file, fmap)) {
+		VBDEBUG(PREFIX "open firmware storage fail\n");
 		return VBNV_RECOVERY_RO_SHARED_DATA;
 	}
 	if (firmware_storage_read(file,
-				CONFIG_OFFSET_GBB, CONFIG_LENGTH_GBB,
+				fmap->readonly.gbb.offset,
+				fmap->readonly.gbb.length,
 				_state.gbb_data)) {
 		VBDEBUG(PREFIX "fail to read gbb\n");
 		return VBNV_RECOVERY_RO_SHARED_DATA;
@@ -226,8 +245,8 @@ static uint32_t init_internal_state(firmware_storage_t *file,
 		return VBNV_RECOVERY_RO_UNSPECIFIED;
 	}
 
-	reason = init_internal_state_bottom_half(file, fdt, cdata, dev_mode,
-			nvcxt);
+	reason = init_internal_state_bottom_half(file, fmap, fdt, cdata,
+			dev_mode, nvcxt);
 
 	/* process a recovery request from nvcontext */
 	if (reason == VBNV_RECOVERY_NOT_REQUESTED &&
@@ -266,14 +285,15 @@ struct RSAPublicKey *PublicKeyToRSA(const VbPublicKey *key);
  *         fails
  */
 static uint32_t load_kernel_subkey_a(firmware_storage_t *file,
-		VbKeyBlockHeader *key_block)
+		struct fdt_onestop_fmap *fmap, VbKeyBlockHeader *key_block)
 {
 	VbFirmwarePreambleHeader *preamble;
 	struct RSAPublicKey *data_key;
 
 	VBDEBUG(PREFIX "reading kernel subkey A\n");
 	if (firmware_storage_read(file,
-				CONFIG_OFFSET_VBLOCK_A, CONFIG_LENGTH_VBLOCK_A,
+				fmap->onestop_layout.vblock.offset,
+				fmap->onestop_layout.vblock.length,
 				key_block)) {
 		VBDEBUG(PREFIX "read verification block fail\n");
 		return VBNV_RECOVERY_RO_SHARED_DATA;
@@ -287,7 +307,8 @@ static uint32_t load_kernel_subkey_a(firmware_storage_t *file,
 
 	preamble = (VbFirmwarePreambleHeader *)((char *)key_block +
 			key_block->key_block_size);
-	if (VerifyFirmwarePreamble(preamble, CONFIG_LENGTH_VBLOCK_A -
+	if (VerifyFirmwarePreamble(preamble,
+				fmap->onestop_layout.vblock.length -
 				key_block->key_block_size, data_key)) {
 		VBDEBUG(PREFIX "verify preamble fail\n");
 		return VBNV_RECOVERY_RO_INVALID_RW;
@@ -309,8 +330,8 @@ static uint32_t load_kernel_subkey_a(firmware_storage_t *file,
  * @return VBNV_RECOVERY_NOT_REQUESTED if it succeeds; recovery reason if it
  *         fails
  */
-static uint32_t init_vbshared_data(firmware_storage_t *file, int dev_mode,
-		VbNvContext *nvcxt)
+static uint32_t init_vbshared_data(firmware_storage_t *file,
+		struct fdt_onestop_fmap *fmap, int dev_mode, VbNvContext *nvcxt)
 {
 	/*
 	 * This function is adapted from LoadFirmware(). The differences
@@ -340,7 +361,7 @@ static uint32_t init_vbshared_data(firmware_storage_t *file, int dev_mode,
 	_state.shared->check_fw_a_result = VBSD_LF_CHECK_VALID;
 	_state.shared->firmware_index = 0;
 
-	return load_kernel_subkey_a(file, _state.key_block);
+	return load_kernel_subkey_a(file, fmap, _state.key_block);
 }
 
 static void beep(void)
@@ -376,15 +397,16 @@ static void show_screen(ScreenIndex screen)
  *
  * @return recvoery reason or REBOOT_TO_CURRENT_MODE
  */
-static uint32_t boot_kernel_helper(struct os_storage *oss,
-		crossystem_data_t *cdata, VbNvContext *nvcxt)
+static uint32_t boot_kernel_helper(struct fdt_onestop_fmap *fmap,
+		struct os_storage *oss, crossystem_data_t *cdata,
+		VbNvContext *nvcxt)
 {
 	int status;
 
 	crossystem_data_dump(&_state.cdata);
 
 	status = boot_kernel(oss, _state.boot_flags,
-			_state.gbb_data, CONFIG_LENGTH_GBB,
+			_state.gbb_data, fmap->readonly.gbb.length,
 			_state.shared, VB_SHARED_DATA_REC_SIZE,
 			nvcxt, cdata);
 
@@ -415,7 +437,8 @@ static uint32_t boot_kernel_helper(struct os_storage *oss,
  * @param reason	recovery reason
  * @param wait_for_unplug wait until user unplugs SD/USB before continuing
  */
-static void recovery_boot(struct os_storage *oss, crossystem_data_t *cdata,
+static void recovery_boot(struct fdt_onestop_fmap *fmap,
+		struct os_storage *oss, crossystem_data_t *cdata,
 		uint32_t reason, int wait_for_unplug, VbNvContext *nvcxt)
 {
 	VBDEBUG(PREFIX "recovery boot\n");
@@ -450,7 +473,7 @@ static void recovery_boot(struct os_storage *oss, crossystem_data_t *cdata,
 		clear_screen();
 
 		/* even if it fails, we simply don't care */
-		boot_kernel_helper(oss, cdata, nvcxt);
+		boot_kernel_helper(fmap, oss, cdata, nvcxt);
 
 		while (os_storage_is_any_storage_device_plugged(
 				oss, NOT_BOOT_PROBED_DEVICE)) {
@@ -471,20 +494,32 @@ static void recovery_boot(struct os_storage *oss, crossystem_data_t *cdata,
  *         fails
  */
 static uint32_t rewritable_boot_init(firmware_storage_t *file,
+		struct fdt_onestop_fmap *fmap, int rofw,
 		crossystem_data_t *cdata, int boot_type)
 {
 	char fwid[ID_LEN];
+	crossystem_data_t *first_stage_cdata;
+	int w;
 
-	/* we pretend we boot from r/w firmware A */
-	if (firmware_storage_read(file, CONFIG_OFFSET_RW_FWID_A,
-				CONFIG_LENGTH_RW_FWID_A, fwid)) {
+	if (firmware_storage_read(file,
+				fmap->onestop_layout.fwid.offset,
+				fmap->onestop_layout.fwid.length,
+				fwid)) {
 		VBDEBUG(PREFIX "read fwid_a fail\n");
 		return VBNV_RECOVERY_RW_SHARED_DATA;
 	}
 
 	crossystem_data_set_fwid(cdata, fwid);
-	crossystem_data_set_active_main_firmware(cdata, REWRITABLE_FIRMWARE_A,
-			boot_type);
+
+	/* we pretend we boot from r/w firmware A */
+	w = REWRITABLE_FIRMWARE_A;
+	if (!rofw) {
+		first_stage_cdata = (crossystem_data_t *)
+			CONFIG_CROSSYSTEM_DATA_ADDRESS;
+		w = crossystem_data_get_active_main_firmware(first_stage_cdata);
+	}
+	if (crossystem_data_set_active_main_firmware(cdata, w, boot_type))
+		VBDEBUG(PREFIX "failed to set active main firmware\n");
 
 	if (TlclStubInit() != TPM_SUCCESS) {
 		VBDEBUG(PREFIX "fail to init tpm\n");
@@ -500,8 +535,9 @@ static uint32_t rewritable_boot_init(firmware_storage_t *file,
  * @return VBNV_RECOVERY_NOT_REQUESTED when caller has to boot from internal
  *         storage device; recovery reason when caller has to go to recovery.
  */
-static uint32_t developer_boot(struct os_storage *oss,
-		crossystem_data_t *cdata, VbNvContext *nvcxt)
+static uint32_t developer_boot(struct fdt_onestop_fmap *fmap,
+		struct os_storage *oss, crossystem_data_t *cdata,
+		VbNvContext *nvcxt)
 {
 	ulong start = 0, time = 0, last_time = 0;
 	int c, is_after_20_seconds = 0;
@@ -547,7 +583,7 @@ static uint32_t developer_boot(struct os_storage *oss,
 			/* even if boot_kernel_helper fails, we don't care */
 			if (os_storage_is_any_storage_device_plugged(
 					oss, BOOT_PROBED_DEVICE))
-				boot_kernel_helper(oss, cdata, nvcxt);
+				boot_kernel_helper(fmap, oss, cdata, nvcxt);
 			beep();
 			break;
 
@@ -575,7 +611,8 @@ static uint32_t developer_boot(struct os_storage *oss,
  *
  * @return recovery reason or REBOOT_TO_CURRENT_MODE
  */
-static uint32_t normal_boot(struct os_storage *oss, crossystem_data_t *cdata,
+static uint32_t normal_boot(struct fdt_onestop_fmap *fmap,
+		struct os_storage *oss, crossystem_data_t *cdata,
 		VbNvContext *nvcxt)
 {
 	VBDEBUG(PREFIX "boot from internal storage\n");
@@ -586,7 +623,7 @@ static uint32_t normal_boot(struct os_storage *oss, crossystem_data_t *cdata,
 		return VBNV_RECOVERY_RW_NO_OS;
 	}
 
-	return boot_kernel_helper(oss, cdata, nvcxt);
+	return boot_kernel_helper(fmap, oss, cdata, nvcxt);
 }
 
 /**
@@ -595,7 +632,7 @@ static uint32_t normal_boot(struct os_storage *oss, crossystem_data_t *cdata,
  * recovery or reboot.
  *
  * @param file		firmware storage interface
- * @param gbb_data	Pointer to GBB data blob
+ * @param fmap		flash map (fmap) blob
  * @param cdata		Pointer to crossystem data
  * @param oss		OS storage interface
  * @param dev_mode	set to 1 if in developer mode, 0 if not
@@ -604,40 +641,42 @@ static uint32_t normal_boot(struct os_storage *oss, crossystem_data_t *cdata,
 	VBNV_COMMAND_PROMPT	Return to U-Boot command prompt
  *	anything else		Go into recovery
  */
-static unsigned onestop_boot(firmware_storage_t *file, struct os_storage *oss,
-		uint8_t *gbb_data, crossystem_data_t *cdata, VbNvContext *nvcxt,
+static unsigned onestop_boot(firmware_storage_t *file,
+		struct fdt_onestop_fmap *fmap, struct os_storage *oss,
+		crossystem_data_t *cdata, VbNvContext *nvcxt,
 		int *dev_mode)
 {
 	unsigned reason = VBNV_RECOVERY_NOT_REQUESTED;
+	int rofw = is_ro_firmware();
 
-	VBDEBUG(PREFIX "%s onestop\n", is_ro_firmware() ? "r/o" : "r/w");
+	VBDEBUG(PREFIX "%s onestop\n", rofw ? "r/o" : "r/w");
 
 	/* Work through our initialization one step at a time */
-	reason = init_internal_state(file, (void *)gd->blob, cdata, dev_mode,
-			oss, nvcxt);
+	reason = init_internal_state(file, fmap, (void *)gd->blob, cdata,
+			dev_mode, oss, nvcxt);
 
 	if (reason == VBNV_RECOVERY_NOT_REQUESTED)
-		if (is_ro_firmware() && !is_tpm_trust_ro_firmware())
-			reason = boot_rw_firmware(file, *dev_mode,
-					gbb_data, cdata, nvcxt);
+		if (rofw && !is_tpm_trust_ro_firmware())
+			reason = boot_rw_firmware(file, fmap, *dev_mode,
+					_state.gbb_data, cdata, nvcxt);
 
 	if (reason == VBNV_RECOVERY_NOT_REQUESTED)
-		reason = init_vbshared_data(file, *dev_mode, nvcxt);
+		reason = init_vbshared_data(file, fmap, *dev_mode, nvcxt);
 
 	if (reason == VBNV_RECOVERY_NOT_REQUESTED)
-		reason = rewritable_boot_init(file, cdata, *dev_mode ?
-			DEVELOPER_TYPE : NORMAL_TYPE);
+		reason = rewritable_boot_init(file, fmap, rofw, cdata,
+				*dev_mode ?  DEVELOPER_TYPE : NORMAL_TYPE);
 
 	if (reason == VBNV_RECOVERY_NOT_REQUESTED) {
 		if (*dev_mode)
-			reason = developer_boot(oss, cdata, nvcxt);
+			reason = developer_boot(fmap, oss, cdata, nvcxt);
 
 		/*
 		* If developer boot flow exits normally or is not requested,
 		* try normal boot flow.
 		*/
 		if (reason == VBNV_RECOVERY_NOT_REQUESTED)
-			reason = normal_boot(oss, cdata, nvcxt);
+			reason = normal_boot(fmap, oss, cdata, nvcxt);
 	}
 
 	/* Give up and fall through to recovery */
@@ -648,19 +687,19 @@ int do_cros_onestop_firmware(cmd_tbl_t *cmdtp, int flag, int argc,
 		char * const argv[])
 {
 	unsigned reason;
+	struct fdt_onestop_fmap fmap;
 	struct os_storage os_storage;
 	firmware_storage_t file;
 	VbNvContext nvcxt;
 	int dev_mode;
 
 	clear_screen();
-	reason = onestop_boot(&file, &os_storage,
-			      _state.gbb_data, &_state.cdata, &nvcxt,
-			      &dev_mode);
+	reason = onestop_boot(&file, &fmap, &os_storage,
+			      &_state.cdata, &nvcxt, &dev_mode);
 	if (reason == VBNV_COMMAND_PROMPT)
 		return 0;
 	if (reason != REBOOT_TO_CURRENT_MODE)
-		recovery_boot(&os_storage, &_state.cdata, reason,
+		recovery_boot(&fmap, &os_storage, &_state.cdata, reason,
 			      _state.boot_flags & BOOT_FLAG_DEVELOPER, &nvcxt);
 	cold_reboot();
 	return 0;

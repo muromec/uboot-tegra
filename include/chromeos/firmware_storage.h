@@ -13,6 +13,7 @@
 #ifndef CHROMEOS_FIRMWARE_STORAGE_H_
 #define CHROMEOS_FIRMWARE_STORAGE_H_
 
+#include <chromeos/fdt_decode.h>
 #include <linux/types.h>
 
 enum whence_t { SEEK_SET, SEEK_CUR, SEEK_END };
@@ -45,6 +46,9 @@ typedef struct {
  * @return 0 if it succeeds, non-zero if it fails
  */
 int firmware_storage_open_spi(firmware_storage_t *file);
+
+int firmware_storage_open_onestop(firmware_storage_t *file,
+		struct fdt_onestop_fmap *fmap);
 
 /**
  * These read or write [count] bytes starting from [offset] of storage into or

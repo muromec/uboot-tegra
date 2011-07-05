@@ -95,6 +95,16 @@ int crossystem_data_set_active_main_firmware(crossystem_data_t *cdata,
 	return 0;
 }
 
+int crossystem_data_get_active_main_firmware(crossystem_data_t *cdata)
+{
+	return cdata->binf[1];
+}
+
+int crossystem_data_get_active_main_firmware_type(crossystem_data_t *cdata)
+{
+	return cdata->binf[3];
+}
+
 int crossystem_data_set_recovery_reason(crossystem_data_t *cdata,
 		uint32_t reason)
 {

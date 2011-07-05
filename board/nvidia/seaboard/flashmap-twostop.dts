@@ -36,12 +36,12 @@
 
 			/* u-boot image including fdt: first ~450 KB */
 			firmware-image {
-				reg = <0x00000000 0x0006ff00>;
+				reg = <0x00000000 0x0007df00>;
 			};
 
 			/* verification block: 64 KB */
 			verification-block {
-				reg = <0x0006ff00 0x00010000>;
+				reg = <0x0007df00 0x00002000>;
 			};
 
 			/* frimware ID: 256 Bytes */

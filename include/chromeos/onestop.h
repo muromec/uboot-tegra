@@ -13,14 +13,16 @@
 
 #include <vboot_nvstorage.h>
 #include <chromeos/crossystem_data.h>
+#include <chromeos/fdt_decode.h>
 #include <chromeos/firmware_storage.h>
 
 int is_ro_firmware(void);
 
 int is_tpm_trust_ro_firmware(void);
 
-uint32_t boot_rw_firmware(firmware_storage_t *file, int dev_mode,
-			  uint8_t *gbb_data, crossystem_data_t *cdata,
-			  VbNvContext *nvcxt);
+uint32_t boot_rw_firmware(firmware_storage_t *file,
+		struct fdt_onestop_fmap *fmap, int dev_mode,
+		uint8_t *gbb_data, crossystem_data_t *cdata,
+		VbNvContext *nvcxt);
 
 #endif /* CHROMEOS_ONESTOP_H_ */

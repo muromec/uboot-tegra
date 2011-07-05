@@ -9,7 +9,9 @@
  */
 
 #include <common.h>
+#include <malloc.h>
 #include <chromeos/common.h>
+#include <chromeos/fdt_decode.h>
 #include <chromeos/onestop.h>
 #include <linux/string.h>
 
@@ -18,24 +20,13 @@
 
 #define PREFIX "onestop_helper: "
 
-/* TODO I am removing this; twostop uses a different layout */
-#if CONFIG_LENGTH_VBLOCK_A != CONFIG_LENGTH_VBLOCK_B
-#  error "vblock A and B have different sizes"
-#endif
-#define VBLOCK_SIZE CONFIG_LENGTH_VBLOCK_A
-
-#if CONFIG_LENGTH_FW_MAIN_A != CONFIG_LENGTH_FW_MAIN_B
-#  error "fw body A and B have different sizes"
-#endif
-#define FWBODY_SIZE CONFIG_LENGTH_FW_MAIN_A
-
 typedef struct {
 	firmware_storage_t *file;
 	struct {
 		uint32_t offset;
 		uint32_t size;
-		uint8_t vblock[VBLOCK_SIZE];
-		uint8_t fwbody[FWBODY_SIZE];
+		uint8_t *vblock;
+		uint8_t *fwbody;
 	} fwinfo[2];
 } get_firmware_body_state_t;
 
@@ -79,57 +70,93 @@ uint32_t get_fwbody_size(uint32_t vblock_address)
 	return preamble->body_signature.data_size;
 }
 
-uint32_t boot_rw_firmware(firmware_storage_t *file, int dev_mode,
-			  uint8_t *gbb_data, crossystem_data_t *cdata,
-			  VbNvContext *nvcxt)
+uint32_t boot_rw_firmware(firmware_storage_t *file,
+		struct fdt_onestop_fmap *fmap, int dev_mode,
+		uint8_t *gbb_data, crossystem_data_t *cdata,
+		VbNvContext *nvcxt)
 {
-	/*
-	 * TODO
-	 * 1. Read r/w firmware from MMC
-	 * 2. Set main firmwre A/B in crossystem data
-	 */
+	/* TODO Read r/w firmware from MMC */
 
 	int status = LOAD_FIRMWARE_RECOVERY;
 	LoadFirmwareParams params;
 	get_firmware_body_state_t internal;
 	uint8_t vbshared[VB_SHARED_DATA_REC_SIZE];
-	int i;
+	int i, w, t;
 
-	if (firmware_storage_read(file, CONFIG_OFFSET_VBLOCK_A,
-				VBLOCK_SIZE, internal.fwinfo[0].vblock)) {
+	internal.fwinfo[0].vblock = malloc(fmap->onestop_layout.vblock.length);
+	internal.fwinfo[1].vblock = malloc(fmap->onestop_layout.vblock.length);
+	internal.fwinfo[0].fwbody = malloc(fmap->onestop_layout.fwbody.length);
+	internal.fwinfo[1].fwbody = malloc(fmap->onestop_layout.fwbody.length);
+
+	if (firmware_storage_read(file,
+				fmap->readwrite_a.offset +
+				fmap->onestop_layout.vblock.offset,
+				fmap->onestop_layout.vblock.length,
+				internal.fwinfo[0].vblock)) {
 		VBDEBUG(PREFIX "fail to read vblock A\n");
 		return VBNV_RECOVERY_RO_INVALID_RW;
 	}
-	if (firmware_storage_read(file, CONFIG_OFFSET_VBLOCK_B,
-				VBLOCK_SIZE, internal.fwinfo[1].vblock)) {
+	if (firmware_storage_read(file,
+				fmap->readwrite_a.offset +
+				fmap->onestop_layout.vblock.offset,
+				fmap->onestop_layout.vblock.length,
+				internal.fwinfo[1].vblock)) {
 		VBDEBUG(PREFIX "fail to read vblock B\n");
 		return VBNV_RECOVERY_RO_INVALID_RW;
 	}
 
 	internal.file = file;
-	internal.fwinfo[0].offset = CONFIG_OFFSET_FW_MAIN_A;
-	internal.fwinfo[1].offset = CONFIG_OFFSET_FW_MAIN_B;
+	internal.fwinfo[0].offset =
+		fmap->readwrite_a.offset + fmap->onestop_layout.fwbody.offset;
+	internal.fwinfo[1].offset =
+		fmap->readwrite_b.offset + fmap->onestop_layout.fwbody.offset;
 	internal.fwinfo[0].size = get_fwbody_size((uint32_t)
 			internal.fwinfo[0].vblock);
 	internal.fwinfo[1].size = get_fwbody_size((uint32_t)
 			internal.fwinfo[1].vblock);
 
 	params.gbb_data = gbb_data;
-	params.gbb_size = CONFIG_LENGTH_GBB;
+	params.gbb_size = fmap->readonly.gbb.length;
 	params.verification_block_0 = internal.fwinfo[0].vblock;
 	params.verification_block_1 = internal.fwinfo[1].vblock;
-	params.verification_size_0 = VBLOCK_SIZE;
-	params.verification_size_1 = VBLOCK_SIZE;
+	params.verification_size_0 = params.verification_size_1 =
+		fmap->onestop_layout.vblock.length;
 	params.shared_data_blob = vbshared;
 	params.shared_data_size = VB_SHARED_DATA_REC_SIZE;
 	params.boot_flags = dev_mode ? BOOT_FLAG_DEVELOPER : 0;
 	params.nv_context = nvcxt;
 	params.caller_internal = &internal;
 
+	VBDEBUG(PREFIX "LoadFirmware...\n");
+	VBDEBUG(PREFIX "- gbb_data:   %p\n", params.gbb_data);
+	VBDEBUG(PREFIX "- gbb_size:   %08llx\n", params.gbb_size);
+	VBDEBUG(PREFIX "- vblock_0:   %p\n", params.verification_block_0);
+	VBDEBUG(PREFIX "- vblock_1:   %p\n", params.verification_block_1);
+	VBDEBUG(PREFIX "- vsize_0:    %08llx\n", params.verification_size_0);
+	VBDEBUG(PREFIX "- vsize_1:    %08llx\n", params.verification_size_1);
+	VBDEBUG(PREFIX "- vbshared:   %p\n", params.shared_data_blob);
+	VBDEBUG(PREFIX "- size:       %08llx\n", params.shared_data_size);
+	VBDEBUG(PREFIX "- boot_flags: %08llx\n", params.boot_flags);
+
 	status = LoadFirmware(&params);
+	VBDEBUG(PREFIX "status: %d\n", status);
+
 	if (status == LOAD_FIRMWARE_SUCCESS) {
 		i = (int)params.firmware_index;
 		VBDEBUG(PREFIX "go to r/w firmware %d", i);
+
+		/*
+		 * Although second-stage firmware only uses the active main
+		 * firmware information that first-stage firmware passes to it,
+		 * we simply copy the whole crossystem data blob. If there is
+		 * really a performance issue, we can optimize this part later.
+		 */
+		w = (i == 0) ? REWRITABLE_FIRMWARE_A : REWRITABLE_FIRMWARE_B;
+		t = dev_mode ? DEVELOPER_TYPE : NORMAL_TYPE;
+		if (crossystem_data_set_active_main_firmware(cdata, w, t))
+			VBDEBUG(PREFIX "failed to set active main firmware\n");
+		memmove((void *)CONFIG_CROSSYSTEM_DATA_ADDRESS, cdata,
+				sizeof(*cdata));
 
 		memmove((void *)CONFIG_SYS_TEXT_BASE, internal.fwinfo[i].fwbody,
 				internal.fwinfo[i].size);
