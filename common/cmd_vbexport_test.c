@@ -272,6 +272,19 @@ static int do_vbexport_test_diskrw(
 	return ret;
 }
 
+static int do_vbexport_test_nvclear(
+		cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+{
+	uint8_t zero_buf[VBNV_BLOCK_SIZE] = {0};
+
+	if (VbExNvStorageWrite(zero_buf)) {
+		VbExDebug("Failed to write nvstorage.\n");
+		return 1;
+	}
+
+	return 0;
+}
+
 static int do_vbexport_test_nvrw(
 		cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
@@ -464,6 +477,7 @@ static cmd_tbl_t cmd_vbexport_test_sub[] = {
 	U_BOOT_CMD_MKENT(diskinfo, 0, 1, do_vbexport_test_diskinfo, "", ""),
 	U_BOOT_CMD_MKENT(diskrw, 0, 1, do_vbexport_test_diskrw, "", ""),
 	U_BOOT_CMD_MKENT(nvrw, 0, 1, do_vbexport_test_nvrw, "", ""),
+	U_BOOT_CMD_MKENT(nvclear, 0, 1, do_vbexport_test_nvclear, "", ""),
 	U_BOOT_CMD_MKENT(key, 0, 1, do_vbexport_test_key, "", ""),
 	U_BOOT_CMD_MKENT(display, 0, 1, do_vbexport_test_display, "", ""),
 };
@@ -496,6 +510,7 @@ U_BOOT_CMD(vbexport_test, CONFIG_SYS_MAXARGS, 1, do_vbexport_test,
 	"vbexport_test beep - test the beep functions\n"
 	"vbexport_test diskinfo - test the diskgetinfo and free functions\n"
 	"vbexport_test diskrw - test the disk read and write functions\n"
+	"vbexport_test nvclear - clear the nvstorage content\n"
 	"vbexport_test nvrw - test the nvstorage read and write functions\n"
 	"vbexport_test key - test the keyboard read function\n"
 	"vbexport_test display - test the display related functions\n"
