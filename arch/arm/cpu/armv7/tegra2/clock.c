@@ -913,20 +913,33 @@ int check_is_tegra2_cold_boot(void)
 	return (base_reg & bf_mask(PLL_BASE_OVRRIDE)) ? 0 : 1;
 }
 
-void common_pll_init(void)
+void clock_early_init(void)
 {
 	/*
 	 * PLLP output frequency set to 216Mh
 	 * PLLC output frequency set to 600Mhz
+	 *
+	 * TODO: Can we calculate these values instead of hard-coding?
 	 */
-	switch (clock_get_rate(CLOCK_ID_OSC)) {
-	case 12000000: /* OSC is 12Mhz */
+	switch (clock_get_osc_freq()) {
+	case CLOCK_OSC_FREQ_12_0: /* OSC is 12Mhz */
 		clock_set_rate(CLOCK_ID_PERIPH, 432, 12, 1, 8);
 		clock_set_rate(CLOCK_ID_CGENERAL, 600, 12, 0, 8);
 		break;
-	case 26000000: /* OSC is 26Mhz */
+
+	case CLOCK_OSC_FREQ_26_0: /* OSC is 26Mhz */
 		clock_set_rate(CLOCK_ID_PERIPH, 432, 26, 1, 8);
 		clock_set_rate(CLOCK_ID_CGENERAL, 600, 26, 0, 8);
+		break;
+
+	case CLOCK_OSC_FREQ_13_0:
+	case CLOCK_OSC_FREQ_19_2:
+	default:
+		/*
+		 * These are not supported. It is too early to print a
+		 * message and the UART likely won't work anyway due to the
+		 * oscillator being wrong.
+		 */
 		break;
 	}
 }

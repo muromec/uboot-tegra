@@ -261,7 +261,7 @@ int board_early_init_f(void)
 	cpu_init_crit();
 
 	/* Initialize essential common plls */
-	common_pll_init();
+	clock_early_init();
 
 	/* Initialize UART clocks */
 	clock_init_uart(uart_ids);

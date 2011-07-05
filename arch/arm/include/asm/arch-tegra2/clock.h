@@ -361,8 +361,8 @@ int clock_verify(void);
 /* Initialize the clocks */
 void clock_init(void);
 
-/* Initialize the plls */
-void common_pll_init(void);
+/* Initialize the PLLs */
+void clock_early_init(void);
 
 #endif
 
