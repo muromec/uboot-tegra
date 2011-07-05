@@ -201,6 +201,7 @@ int board_init(void)
 #ifdef CONFIG_USB_EHCI_TEGRA
 	board_usb_init(gd->blob);
 #endif
+	clock_verify();
 #ifdef CONFIG_TEGRA2_SPI
 	spi_init();
 #endif

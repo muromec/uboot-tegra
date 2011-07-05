@@ -351,6 +351,13 @@ unsigned clock_get_rate(enum clock_id clkid);
 /* Return 1=cold boot; 0=not cold boot */
 int check_is_tegra2_cold_boot(void);
 
+/*
+ * Checks that clocks are valid and prints a warning if not
+ *
+ * @return 0 if ok, -1 on error
+ */
+int clock_verify(void);
+
 /* Initialize the clocks */
 void clock_init(void);
 

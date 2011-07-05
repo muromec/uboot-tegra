@@ -79,6 +79,7 @@ enum clock_type_id {
 #define clock_type_id_isvalid(id) ((id) >= 0 && \
 		(id) < CLOCK_TYPE_COUNT)
 
+char pllp_valid = 1;	/* PLLP is set up correctly */
 
 enum {
 	CLOCK_MAX_MUX	= 4	/* number of source options for each clock */
@@ -838,7 +839,8 @@ unsigned clock_get_rate(enum clock_id clkid)
  * @param m PLL input divider(DIVN)
  * @param p post divider(DIVP)
  * @param cpcon base PLL charge pump(CPCON)
- * @return 0 if ok, -1 on error (the requested PLL cannot be overriden)
+ * @return 0 if ok, -1 on error (the requested PLL is incorrect and cannot
+ *		be overriden), 1 if PLL is already correct
  */
 static int clock_set_rate(enum clock_id clkid, u32 n, u32 m, u32 p, u32 cpcon)
 {
@@ -850,17 +852,25 @@ static int clock_set_rate(enum clock_id clkid, u32 n, u32 m, u32 p, u32 cpcon)
 
 	base_reg = readl(&pll->pll_base);
 
-	if(clkid == CLOCK_ID_PERIPH)
-		if(base_reg & bf_mask(PLL_BASE_OVRRIDE))
-			return -1;
-
 	/* Set BYPASS, m, n and p to PLL_BASE */
-	bf_update(PLL_BYPASS, base_reg, 1);
-	if(clkid == CLOCK_ID_PERIPH)
-		bf_update(PLL_BASE_OVRRIDE, base_reg, 1);
 	bf_update(PLL_DIVM, base_reg, m);
 	bf_update(PLL_DIVN, base_reg, n);
 	bf_update(PLL_DIVP, base_reg, p);
+	if (clkid == CLOCK_ID_PERIPH) {
+		/*
+		 * If the PLL is already set up, check that it is correct
+		 * and record this info for clock_verify() to check.
+		 */
+		if (base_reg & bf_mask(PLL_BASE_OVRRIDE)) {
+			base_reg |= bf_ones(PLL_ENABLE);
+			if (base_reg != readl(&pll->pll_base))
+				pllp_valid = 0;
+			return pllp_valid ? 1 : -1;
+		}
+		bf_update(PLL_BASE_OVRRIDE, base_reg, 1);
+	}
+
+	bf_update(PLL_BYPASS, base_reg, 1);
 	writel(base_reg, &pll->pll_base);
 
 	/* Set cpcon to PLL_MISC */
@@ -876,6 +886,19 @@ static int clock_set_rate(enum clock_id clkid, u32 n, u32 m, u32 p, u32 cpcon)
 	bf_update(PLL_BYPASS, base_reg, 0);
 	writel(base_reg, &pll->pll_base);
 
+	return 0;
+}
+
+int clock_verify(void)
+{
+	struct clk_pll *pll = get_pll(CLOCK_ID_PERIPH);
+	u32 reg = readl(&pll->pll_base);
+
+	if (!pllp_valid) {
+		printf("Warning: PLLP %x is not correct\n", reg);
+		return -1;
+	}
+	debug("PLLX %x is correct\n", reg);
 	return 0;
 }
 
