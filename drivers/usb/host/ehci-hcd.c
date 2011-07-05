@@ -850,6 +850,9 @@ int usb_lowlevel_init(void)
 	if (ehci_hcd_init() != 0)
 		return -1;
 #endif
+	/* Set the high address word (aka segment) for 64-bit controller */
+	if (ehci_readl(&hccr->cr_hccparams) & 1) /* 64-bit Addressing */
+		ehci_writel(&hcor->or_ctrldssegment, 0);
 
 	/* Set head of reclaim list */
 	memset(&qh_list, 0, sizeof(qh_list));
