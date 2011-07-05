@@ -13,9 +13,14 @@
 #ifndef __GPIO_H__
 #define __GPIO_H__
 
+enum polarity {
+	GPIO_ACTIVE_LOW		= 0,
+	GPIO_ACTIVE_HIGH	= 1
+};
+
 /* GPIO accessor functions: returns 0 if false, nonzero if true */
-int is_firmware_write_protect_gpio_asserted(void);
-int is_recovery_mode_gpio_asserted(void);
-int is_developer_mode_gpio_asserted(void);
+int is_firmware_write_protect_gpio_asserted(enum polarity polarity);
+int is_recovery_mode_gpio_asserted(enum polarity polarity);
+int is_developer_mode_gpio_asserted(enum polarity polarity);
 
 #endif /* __GPIO_H__ */

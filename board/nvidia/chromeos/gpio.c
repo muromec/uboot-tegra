@@ -16,24 +16,24 @@
 #include <chromeos/common.h>
 #include <chromeos/gpio.h>
 
-#define GPIO_ACTIVE_HIGH	0
-#define GPIO_ACTIVE_LOW		1
-
-#define GPIO_ACCESSOR(gpio_number, polarity) \
-	gpio_direction_input(gpio_number); \
-	return (polarity) ^ gpio_get_value(gpio_number);
-
-int is_firmware_write_protect_gpio_asserted(void)
+static int read_gpio(enum polarity polarity, int gpio)
 {
-	GPIO_ACCESSOR(GPIO_PH3, GPIO_ACTIVE_HIGH);
+	int pol = (polarity == GPIO_ACTIVE_HIGH) ? 0 : 1;
+	gpio_direction_input(gpio);
+	return pol ^ gpio_get_value(gpio);
 }
 
-int is_recovery_mode_gpio_asserted(void)
+int is_firmware_write_protect_gpio_asserted(enum polarity polarity)
 {
-	GPIO_ACCESSOR(GPIO_PH0, GPIO_ACTIVE_LOW);
+	return read_gpio(polarity, GPIO_PH3);
 }
 
-int is_developer_mode_gpio_asserted(void)
+int is_recovery_mode_gpio_asserted(enum polarity polarity)
 {
-	GPIO_ACCESSOR(GPIO_PV0, GPIO_ACTIVE_HIGH);
+	return read_gpio(polarity, GPIO_PH0);
+}
+
+int is_developer_mode_gpio_asserted(enum polarity polarity)
+{
+	return read_gpio(polarity, GPIO_PV0);
 }

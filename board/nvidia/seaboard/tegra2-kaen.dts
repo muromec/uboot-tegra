@@ -12,6 +12,11 @@
 		odmdata = <0x300d8011>;
 		hwid = "ARM KAEN TEST 3084";
 		machine-arch-id = <3217>;
+
+		/* GPIO polarity: 0=active_low, 1=active_high */
+		polarity_write_protect_switch	= <1>;
+		polarity_recovery_switch	= <0>;
+		polarity_developer_switch	= <1>;
 	};
 
 	aliases {

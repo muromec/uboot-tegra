@@ -11,6 +11,7 @@
 #include <common.h>
 #include <command.h>
 #include <lcd.h>
+#include <fdt_decode.h>
 #include <chromeos/common.h>
 #include <chromeos/crossystem_data.h>
 #include <chromeos/firmware_storage.h>
@@ -56,6 +57,8 @@ static struct internal_state_t {
 	uint8_t gbb_data[CONFIG_LENGTH_GBB];
 	uint8_t key_block_buffer[CONFIG_LENGTH_VBLOCK_A];
 } _state;
+
+DECLARE_GLOBAL_DATA_PTR;
 
 /**
  * This loads VbNvContext to internal state. The caller has to initialize
@@ -108,22 +111,48 @@ static uint32_t init_internal_state_nvcontext(VbNvContext *nvcxt,
  * before calling this function.
  *
  * @param file		firmware storage interface
+ * @param fdt		device tree blob
  * @param cdata		kernel shared data pointer
  * @param dev_mode	returns 1 if in developer mode, 0 if not
  * @return VBNV_RECOVERY_NOT_REQUESTED if it succeeds; recovery reason if it
  *         fails
  */
 static uint32_t init_internal_state_bottom_half(firmware_storage_t *file,
-		crossystem_data_t *cdata, int *dev_mode, VbNvContext *nvcxt)
+		void *fdt, crossystem_data_t *cdata, int *dev_mode,
+		VbNvContext *nvcxt)
 {
 	char frid[ID_LEN];
 	int write_protect_sw, recovery_sw, developer_sw;
+	int polarity_write_protect_sw, polarity_recovery_sw,
+	    polarity_developer_sw;
 	uint32_t reason = VBNV_RECOVERY_NOT_REQUESTED;
 
+	/* load gpio polarity */
+	polarity_write_protect_sw = fdt_decode_get_config_int(fdt,
+			"polarity_write_protect_switch", GPIO_ACTIVE_HIGH);
+	polarity_recovery_sw = fdt_decode_get_config_int(fdt,
+			"polarity_recovery_switch", GPIO_ACTIVE_HIGH);
+	polarity_developer_sw = fdt_decode_get_config_int(fdt,
+			"polarity_developer_switch", GPIO_ACTIVE_HIGH);
+
+	VBDEBUG(PREFIX "polarity:\n");
+	VBDEBUG(PREFIX "- wpsw:  %d\n", polarity_write_protect_sw);
+	VBDEBUG(PREFIX "- recsw: %d\n", polarity_recovery_sw);
+	VBDEBUG(PREFIX "- devsw: %d\n", polarity_developer_sw);
+
 	/* fetch gpios at once */
-	write_protect_sw = is_firmware_write_protect_gpio_asserted();
-	recovery_sw = is_recovery_mode_gpio_asserted();
-	developer_sw = is_developer_mode_gpio_asserted();
+	write_protect_sw = is_firmware_write_protect_gpio_asserted(
+			polarity_write_protect_sw);
+	recovery_sw = is_recovery_mode_gpio_asserted(
+			polarity_recovery_sw);
+	developer_sw = is_developer_mode_gpio_asserted(
+			polarity_developer_sw);
+
+	VBDEBUG(PREFIX "gpio value:\n");
+	VBDEBUG(PREFIX "- wpsw:  %d\n", write_protect_sw);
+	VBDEBUG(PREFIX "- recsw: %d\n", recovery_sw);
+	VBDEBUG(PREFIX "- devsw: %d\n", developer_sw);
+
 	if (developer_sw) {
 		_state.boot_flags |= BOOT_FLAG_DEVELOPER;
 		_state.boot_flags |= BOOT_FLAG_DEV_FIRMWARE;
@@ -137,7 +166,9 @@ static uint32_t init_internal_state_bottom_half(firmware_storage_t *file,
 
 	if (crossystem_data_init(cdata, frid, CONFIG_OFFSET_FMAP,
 				_state.gbb_data, nvcxt->raw,
-				write_protect_sw, recovery_sw, developer_sw)) {
+				write_protect_sw, recovery_sw, developer_sw,
+				polarity_write_protect_sw, polarity_recovery_sw,
+				polarity_developer_sw)) {
 		VBDEBUG(PREFIX "init crossystem data fail\n");
 		reason = VBNV_RECOVERY_RO_UNSPECIFIED;
 	}
@@ -153,13 +184,14 @@ static uint32_t init_internal_state_bottom_half(firmware_storage_t *file,
  * This initializes global variable [_state] and crossystem data.
  *
  * @param file		firmware storage interface
+ * @param fdt		device tree blob
  * @param cdata		pointer to kernel shared data
  * @param dev_mode	set to 1 if in developer mode, 0 if not
  * @return VBNV_RECOVERY_NOT_REQUESTED if it succeeds; recovery reason if it
  *         fails
  */
 static uint32_t init_internal_state(firmware_storage_t *file,
-		crossystem_data_t *cdata, int *dev_mode,
+		void *fdt, crossystem_data_t *cdata, int *dev_mode,
 		struct os_storage *oss, VbNvContext *nvcxt)
 {
 	uint32_t reason, recovery_request;
@@ -194,7 +226,8 @@ static uint32_t init_internal_state(firmware_storage_t *file,
 		return VBNV_RECOVERY_RO_UNSPECIFIED;
 	}
 
-	reason = init_internal_state_bottom_half(file, cdata, dev_mode, nvcxt);
+	reason = init_internal_state_bottom_half(file, fdt, cdata, dev_mode,
+			nvcxt);
 
 	/* process a recovery request from nvcontext */
 	if (reason == VBNV_RECOVERY_NOT_REQUESTED &&
@@ -580,7 +613,8 @@ static unsigned onestop_boot(firmware_storage_t *file, struct os_storage *oss,
 	VBDEBUG(PREFIX "%s onestop\n", is_ro_firmware() ? "r/o" : "r/w");
 
 	/* Work through our initialization one step at a time */
-	reason = init_internal_state(file, cdata, dev_mode, oss, nvcxt);
+	reason = init_internal_state(file, (void *)gd->blob, cdata, dev_mode,
+			oss, nvcxt);
 
 	if (reason == VBNV_RECOVERY_NOT_REQUESTED)
 		if (is_ro_firmware() && !is_tpm_trust_ro_firmware())
