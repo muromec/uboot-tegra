@@ -1,0 +1,120 @@
+/*
+ * Copyright (c) 2011 The Chromium OS Authors. All rights reserved.
+ * Use of this source code is governed by a BSD-style license that can be
+ * found in the LICENSE file.
+ */
+
+/*
+ * This is the flash map for a 2MB device. It defines all the areas that
+ * Chrome OS expects to find in its firmware device. The device is split into
+ * a number of top-level sections, and within each are several areas.
+ */
+
+/ {
+	flash {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		compatible = "chromeos,flashmap";
+		reg = <0x00000000 0x00200000>;
+
+		/* ---- Section: Read-only ---- */
+		readonly {
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			/*
+			 * This was 0xf0000 in the config file, but I have
+			 * moved vpd into the same section
+			 */
+			reg = <0x00000000 0x00100000>;
+			stub {
+				reg = <0x00000000 0x00088000>;
+			};
+			recovery {
+				reg = <0x00088000 0x00040000>;
+			};
+			data {
+				reg = <0x000c8000 0x00008000>;
+			};
+			fmap {
+				reg = <0x000c8000 0x00000400>;
+			};
+			fwid {
+				reg = <0x000c8400 0x00000100>;
+			};
+			gbb {
+				reg = <0x000d0000 0x00020000>;
+			};
+			vpd {
+				reg = <0x000f0000 0x00010000>;
+			};
+		};
+
+		/* ---- Section: Rewritable slot A ---- */
+		readwrite-a {
+			#address-cells = <1>;
+			#size-cells = <1>;
+			reg = <0x00100000 0x00078000>;
+			vblock {
+				reg = <0x00100000 0x00010000>;
+			};
+			main {
+				reg = <0x00110000 0x00067f00>;
+			};
+			fwid {
+				reg = <0x00177f00 0x00000100>;
+			};
+			data {
+				reg = <0x00100000 0x00000000>;
+			};
+		};
+
+		/* ---- Section: Rewritable slot B ---- */
+		readwrite-b {
+			#address-cells = <1>;
+			#size-cells = <1>;
+			reg = <0x00178000 0x00078000>;
+			vblock {
+				reg = <0x00178000 0x00010000>;
+			};
+			main {
+				reg = <0x00188000 0x00067f00>;
+			};
+			fwid {
+				reg = <0x001eff00 0x00000100>;
+			};
+			data {
+				reg = <0x00178000 0x00000000>;
+			};
+		};
+
+		/* ---- Section: Rewritable VPD ---- */
+		readwrite-vpd {
+			#address-cells = <1>;
+			#size-cells = <1>;
+			reg = <0x001f0000 0x00008000>;
+			vpd {
+				reg = <0x001f0000 0x00008000>;
+			};
+		};
+
+		/* ---- Section: Rewritable shared ---- */
+		readwrite-shared {
+			#address-cells = <1>;
+			#size-cells = <1>;
+			dev-cfg {
+				reg = <0x001f8000 0x00004000>;
+			};
+			shared-data {
+				reg = <0x001fc000 0x00002000>;
+			};
+			vbnv-context {
+				reg = <0x001fe000 0x00001000>;
+			};
+			env {
+				reg = <0x001ff000 0x00001000>;
+			};
+		};
+	};
+
+};

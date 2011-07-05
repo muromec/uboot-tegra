@@ -2,6 +2,7 @@
 
 /memreserve/ 0x1c000000 0x04000000;
 /include/ "../../../arch/arm/cpu/armv7/tegra2/tegra250.dtsi"
+/include/ "flashmap-twostop.dts"
 
 / {
 	model = "NVIDIA Seaboard";
