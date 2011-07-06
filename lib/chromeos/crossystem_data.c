@@ -124,7 +124,7 @@ int crossystem_data_set_recovery_reason(crossystem_data_t *cdata,
 int crossystem_data_embed_into_fdt(crossystem_data_t *cdata, void *fdt,
 		uint32_t *size_ptr)
 {
-	char path[] = "/crossystem";
+	char path[] = "/firmware/chromeos";
 	int nodeoffset, err;
 
 	err = fdt_open_into(fdt, fdt,
