@@ -40,6 +40,7 @@ static const char *compat_names[COMPAT_COUNT] = {
 	COMPAT(NVIDIA_TEGRA250_USB, "nvidia,tegra250-usb"),
 	COMPAT(NVIDIA_TEGRA250_SDHCI, "nvidia,tegra250-sdhci"),
 	COMPAT(NVIDIA_TEGRA250_KBC, "nvidia,tegra250-kbc"),
+	COMPAT(NVIDIA_TEGRA250_I2C, "nvidia,tegra250-i2c"),
 };
 
 /**
@@ -602,4 +603,17 @@ int fdt_decode_kbc(const void *blob, int node, struct fdt_kbc *config)
 		err = get_byte_array(blob, node, "keycode-ctrl",
 				config->ctrl_keycode, FDT_KBC_KEY_COUNT);
 	return err;
+}
+
+int fdt_decode_i2c(const void *blob, int node, struct fdt_i2c *config)
+{
+	config->reg = (struct i2c_ctlr *)get_addr(blob, node, "reg");
+	config->pinmux = get_int(blob, node, "pinmux", 0);
+	config->speed = get_int(blob, node, "speed", 0);
+	config->periph_id = get_int(blob, node, "periph-id", -1);
+
+	if (config->periph_id == -1)
+		return -FDT_ERR_MISSING;
+
+	return 0;
 }

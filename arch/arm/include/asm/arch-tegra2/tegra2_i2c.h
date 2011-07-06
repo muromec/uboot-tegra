@@ -33,8 +33,13 @@
 /* Convert i2c slave address to be put on bus  */
 #define I2C_ADDR_ON_BUS(chip)		(chip << 1)
 
+#ifndef CONFIG_OF_CONTROL
 enum {
 	I2CSPEED_KHZ = 100,		/* in KHz */
+};
+#endif
+
+enum {
 	I2C_TIMEOUT_USEC = 10000,	/* Wait time for completion */
 	I2C_FIFO_DEPTH = 8,		/* I2C fifo depth */
 };

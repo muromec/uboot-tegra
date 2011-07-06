@@ -30,12 +30,16 @@
 #include <asm/arch/gpio.h>
 #include <asm/arch/pinmux.h>
 #include <asm/arch/tegra2_i2c.h>
+#include <fdt_decode.h>
+
+DECLARE_GLOBAL_DATA_PTR;
 
 static unsigned int i2c_bus_num;
 
 struct i2c_bus {
 	int			id;
 	enum periph_id		periph_id;
+	int			speed;
 	int			pinmux_config;
 	struct i2c_control	*control;
 	struct i2c_ctlr		*regs;
@@ -156,11 +160,11 @@ static void i2c_reset_controller(struct i2c_bus *i2c_bus)
 	set_packet_mode(i2c_bus);
 }
 
-static void i2c_init_controller(struct i2c_bus *i2c_bus, u32 clock_khz)
+static void i2c_init_controller(struct i2c_bus *i2c_bus)
 {
 	/* TODO: Fix bug which makes us need to do this */
 	clock_start_periph_pll(i2c_bus->periph_id, CLOCK_ID_OSC,
-			       clock_khz * 1000 * (8 * 2 - 1));
+			       i2c_bus->speed * (8 * 2 - 1));
 
 	/* Reset I2C controller. */
 	i2c_reset_controller(i2c_bus);
@@ -368,40 +372,81 @@ static int tegra2_i2c_read_data(u32 addr, u8 *data, u32 len)
 	return error;
 }
 
-void i2c_init_board(void)
+#ifndef CONFIG_OF_CONTROL
+static const enum periph_id i2c_periph_ids[CONFIG_SYS_MAX_I2C_BUS] = {
+	PERIPH_ID_DVC_I2C,
+	PERIPH_ID_I2C1,
+	PERIPH_ID_I2C2,
+	PERIPH_ID_I2C3
+};
+
+static const u32 *i2c_bus_base[CONFIG_SYS_MAX_I2C_BUS] = {
+	(u32 *)TEGRA2_DVC_BASE,
+	(u32 *)TEGRA2_I2C1_BASE,
+	(u32 *)TEGRA2_I2C2_BASE,
+	(u32 *)TEGRA2_I2C3_BASE
+};
+
+/* pinmux_configs based on the pinmux configuration */
+static const int pinmux_configs[CONFIG_SYS_MAX_I2C_BUS] = {
+	CONFIG_I2CP_PIN_MUX,	/* for I2CP (DVC I2C) */
+	CONFIG_I2C1_PIN_MUX,	/* for I2C1 */
+	CONFIG_I2C2_PIN_MUX,	/* for I2C2 */
+	CONFIG_I2C3_PIN_MUX	/* for I2C3 */
+};
+
+static int i2c_get_config(int *index, struct i2c_bus *i2c_bus)
+{
+	int i = *index;
+
+	if (i >= CONFIG_SYS_MAX_I2C_BUS)
+		return -1;
+
+	i2c_bus->periph_id = i2c_periph_ids[i];
+	i2c_bus->pinmux_config = pinmux_configs[i];
+	i2c_bus->regs = (struct i2c_ctlr *)i2c_bus_base[i];
+	i2c_bus->speed = I2CSPEED_KHZ * 1000;
+
+	*index = i + 1;
+
+	return 0;
+}
+#else
+static int i2c_get_config(int *index, struct i2c_bus *i2c_bus)
+{
+	const void *blob = gd->blob;
+	struct fdt_i2c config;
+	int node = fdt_decode_next_alias(blob,
+					 "i2c",
+					 COMPAT_NVIDIA_TEGRA250_I2C,
+					 index);
+	if (node < 0)
+		return -1;
+
+	if (fdt_decode_i2c(blob, node, &config))
+		return -1;
+
+	i2c_bus->periph_id = config.periph_id;
+	i2c_bus->pinmux_config = config.pinmux;
+	i2c_bus->regs = config.reg;
+	i2c_bus->speed = config.speed;
+
+	return 0;
+}
+#endif
+
+int i2c_init_board(void)
 {
 	struct i2c_bus *i2c_bus;
+	int index = 0;
 	int i;
-
-	enum periph_id i2c_periph_ids[CONFIG_SYS_MAX_I2C_BUS] = {
-		PERIPH_ID_DVC_I2C,
-		PERIPH_ID_I2C1,
-		PERIPH_ID_I2C2,
-		PERIPH_ID_I2C3
-	};
-
-	u32 *i2c_bus_base[CONFIG_SYS_MAX_I2C_BUS] = {
-		(u32 *)TEGRA2_DVC_BASE,
-		(u32 *)TEGRA2_I2C1_BASE,
-		(u32 *)TEGRA2_I2C2_BASE,
-		(u32 *)TEGRA2_I2C3_BASE
-	};
-
-	/* pinmux_configs based on the pinmux configuration */
-	int pinmux_configs[CONFIG_SYS_MAX_I2C_BUS] = {
-		CONFIG_I2CP_PIN_MUX,	/* for I2CP (DVC I2C) */
-		CONFIG_I2C1_PIN_MUX,	/* for I2C1 */
-		CONFIG_I2C2_PIN_MUX,	/* for I2C2 */
-		CONFIG_I2C3_PIN_MUX	/* for I2C3 */
-	};
 
 	/* build the i2c_controllers[] for each controller */
 	for (i = 0; i < CONFIG_SYS_MAX_I2C_BUS; ++i) {
 		i2c_bus = &i2c_controllers[i];
 		i2c_bus->id = i;
-		i2c_bus->periph_id = i2c_periph_ids[i];
-		i2c_bus->pinmux_config = pinmux_configs[i];
-		i2c_bus->regs = (struct i2c_ctlr *)i2c_bus_base[i];
+
+		i2c_get_config(&index, i2c_bus);
 
 		if (i2c_bus->periph_id == PERIPH_ID_DVC_I2C)
 			i2c_bus->control =
@@ -409,8 +454,10 @@ void i2c_init_board(void)
 		else
 			i2c_bus->control = &i2c_bus->regs->control;
 
-		i2c_init_controller(i2c_bus, I2CSPEED_KHZ);
+		i2c_init_controller(i2c_bus);
 	}
+
+	return 0;
 }
 
 void i2c_init(int speed, int slaveaddr)
@@ -564,4 +611,3 @@ int i2c_set_bus_num(unsigned int bus)
 	return 0;
 }
 #endif
-

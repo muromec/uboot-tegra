@@ -32,6 +32,11 @@
 
 		sdmmc0 = "/sdhci@c8000600";
 		sdmmc1 = "/sdhci@c8000400";
+
+		i2c0 = "/i2c@0x7000d000";
+		i2c1 = "/i2c@0x7000c000";
+		i2c2 = "/i2c@0x7000c400";
+		i2c3 = "/i2c@0x7000c500";
 	};
 
 	chosen {
@@ -101,6 +106,7 @@
 		utmi = <&usbphy>;
 		host-mode = <0>;
 	};
+
 	kbc@0x7000e200 {
 		keycode-plain    = [00  00  DD  00  DC  00  00  00
 				    00  1b  09  '`' 'a' 'z' '1' 'q'

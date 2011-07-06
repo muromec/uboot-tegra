@@ -220,5 +220,36 @@
 		reg = <0x7000e200 0x0078>;
 	};
 
+	i2c@0x7000c000 {
+		compatible = "nvidia,tegra250-i2c";
+		reg = <0x7000c000 0x006c>;
+		pinmux = <1>;
+		speed = <100000>;
+		periph-id = <12>;	// PERIPH_ID_I2C1
+	};
+
+	i2c@0x7000c400 {
+		compatible = "nvidia,tegra250-i2c";
+		reg = <0x7000c400 0x006c>;
+		pinmux = <2>;
+		speed = <100000>;
+		periph-id = <54>;	// PERIPH_ID_I2C2
+	};
+
+	i2c@0x7000c500 {
+		compatible = "nvidia,tegra250-i2c";
+		reg = <0x7000c500 0x006c>;
+		pinmux = <1>;
+		speed = <100000>;
+		periph-id = <67>;	// PERIPH_ID_I2C3
+	};
+
+	i2c@0x7000d000 {
+		compatible = "nvidia,tegra250-i2c";
+		reg = <0x7000d000 0x007c>;
+		pinmux = <1>;
+		speed = <100000>;
+		periph-id = <47>;	// PERIPH_ID_DVC_I2C
+	};
 };
 

@@ -54,6 +54,7 @@ enum fdt_compat_id {
 	COMPAT_NVIDIA_TEGRA250_USB,	/* Tegra 250 USB port */
 	COMPAT_NVIDIA_TEGRA250_SDMMC,	/* Tegra 250 SDMMC port */
 	COMPAT_NVIDIA_TEGRA250_KBC,	/* Tegra 250 Keyboard */
+	COMPAT_NVIDIA_TEGRA250_I2C,	/* Tegra 250 i2c */
 
 	COMPAT_COUNT,
 };
@@ -188,6 +189,14 @@ struct fdt_kbc {
 	u8 shift_keycode[FDT_KBC_KEY_COUNT];
 	u8 fn_keycode[FDT_KBC_KEY_COUNT];
 	u8 ctrl_keycode[FDT_KBC_KEY_COUNT];
+};
+
+/* Information about i2c controller */
+struct fdt_i2c {
+	struct i2c_ctlr *reg;
+	int pinmux;
+	u32 speed;
+	enum periph_id periph_id;
 };
 
 /**
@@ -396,6 +405,25 @@ char *fdt_decode_get_config_string(const void *blob, const char *prop_name);
  */
 int fdt_decode_get_config_int(const void *blob, const char *prop_name,
 		int default_val);
+
+/**
+ * Returns information from the FDT about an i2c controler. This function reads
+ * out the following attributes:
+ *
+ *	reg
+ *	pinmux
+ *	speed
+ *	periph-id
+ *
+ * @param blob		FDT blob to use
+ * @param node		Node to read from
+ * @param config	structure to use to return information
+ * @returns 0 on success, -ve on error, in which case config may or may not be
+ *			unchanged. If the node is present but expected data is
+ *			missing then this will generally return
+ *			-FDT_ERR_MISSING.
+ */
+int fdt_decode_i2c(const void *blob, int node, struct fdt_i2c *config);
 
 /**
  * Returns information from the FDT about the keboard controler. This function

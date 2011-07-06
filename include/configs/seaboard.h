@@ -118,6 +118,12 @@
 	  0,     0,    0,    0,  '?',    0,    0,    0		\
 }
 
+/* pin-mux settings for seaboard */
+#define CONFIG_I2CP_PIN_MUX		1
+#define CONFIG_I2C1_PIN_MUX		1
+#define CONFIG_I2C2_PIN_MUX		2
+#define CONFIG_I2C3_PIN_MUX		1
+
 #endif /* CONFIG_OF_CONTROL not defined ^^^^^^^ */
 
 #define CONFIG_TEGRA2_KEYBOARD
@@ -157,12 +163,6 @@
 #define CONFIG_INFINEON_TPM_I2C_BUS	2
 #define CONFIG_TPM_SLB9635_I2C
 #define CONFIG_TPM_I2C_BURST_LIMITATION	3
-
-/* pin-mux settings for seaboard */
-#define CONFIG_I2CP_PIN_MUX		1
-#define CONFIG_I2C1_PIN_MUX		1
-#define CONFIG_I2C2_PIN_MUX		2
-#define CONFIG_I2C3_PIN_MUX		1
 
 /* SD/MMC */
 #define CONFIG_MMC
