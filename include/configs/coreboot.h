@@ -138,16 +138,35 @@
 #define CONFIG_CMD_USB
 
 #define CONFIG_BOOTDELAY			-1
-#define CONFIG_BOOTARGS				"console=uart8250,mmio,0xe0401000,115200n8 "\
-						"root=/dev/sda3 "\
-						"init=/sbin/init "\
-						"i915.modeset=1 "\
-						"rootwait "\
-						"ro "\
-						"cros_legacy"
+#undef  CONFIG_BOOTARGS
 
-#define CONFIG_BOOTCOMMAND			"fatload ide 0:c 3000000 syslinux/vmlinuz.a; "\
+#define CONFIG_BOOTCOMMAND			"run set_bootargs; "\
+						"fatload ${devtype} ${devnum}:c 3000000 syslinux/vmlinuz.a; "\
 						"zboot 3000000; "
+
+#define CONFIG_EXTRA_ENV_SETTINGS       	"devtype=ide\0"\
+						"devnum=0\0"\
+						"devname=sda\0"\
+						"set_bootargs=setenv bootargs "\
+							"console=uart8250,mmio,0xe0401000,115200n8 "\
+							"root=/dev/${devname}3 "\
+							"init=/sbin/init "\
+							"i915.modeset=1 "\
+							"rootwait "\
+							"ro "\
+							"cros_legacy\0"\
+						"usb_boot=usb start;"\
+							"setenv devtype usb;"\
+							"setenv devnum 1;"\
+							"setenv devname sdb;"\
+							"run bootcmd\0" \
+						"mmc_boot=usb start;"\
+							"setenv devtype usb;"\
+							"setenv devnum 0;"\
+							"setenv devname sdb;"\
+							"run bootcmd\0" \
+						""
+
 
 #if defined(CONFIG_CMD_KGDB)
 #define CONFIG_KGDB_BAUDRATE			115200
