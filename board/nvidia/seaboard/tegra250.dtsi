@@ -1,4 +1,4 @@
-/include/ "../../../../../dts/skeleton.dtsi"
+/include/ "skeleton.dtsi"
 
 / {
 	model = "NVIDIA Tegra 250";
