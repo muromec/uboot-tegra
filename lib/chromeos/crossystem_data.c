@@ -9,6 +9,7 @@
  */
 
 #include <common.h>
+#include <fdt_decode.h>
 #include <gbb_header.h> /* for GoogleBinaryBlockHeader */
 #include <libfdt.h>
 #include <chromeos/common.h>
@@ -27,11 +28,9 @@ enum {
 	CHSW_WRITE_PROTECT_DISABLED	= 0x200
 };
 
-int crossystem_data_init(crossystem_data_t *cdata, char *frid,
+int crossystem_data_init(crossystem_data_t *cdata, void *fdt, char *frid,
 		uint32_t fmap_data, void *gbb_data, void *nvcxt_raw,
-		int write_protect_sw, int recovery_sw, int developer_sw,
-		int polarity_write_protect_sw, int polarity_recovery_sw,
-		int polarity_developer_sw)
+		int write_protect_sw, int recovery_sw, int developer_sw)
 {
 	GoogleBinaryBlockHeader *gbbh = (GoogleBinaryBlockHeader *)gbb_data;
 
@@ -65,9 +64,19 @@ int crossystem_data_init(crossystem_data_t *cdata, char *frid,
 	cdata->recovery_sw = recovery_sw;
 	cdata->developer_sw = developer_sw;
 
-	cdata->polarity_write_protect_sw = polarity_write_protect_sw;
-	cdata->polarity_recovery_sw = polarity_recovery_sw;
-	cdata->polarity_developer_sw = polarity_developer_sw;
+	cdata->gpio_port_write_protect_sw = fdt_decode_get_config_int(fdt,
+			"gpio_port_write_protect_switch", -1);
+	cdata->gpio_port_recovery_sw = fdt_decode_get_config_int(fdt,
+			"gpio_port_recovery_switch", -1);
+	cdata->gpio_port_developer_sw = fdt_decode_get_config_int(fdt,
+			"gpio_port_developer_switch", -1);
+
+	cdata->polarity_write_protect_sw = fdt_decode_get_config_int(fdt,
+			"polarity_write_protect_switch", -1);
+	cdata->polarity_recovery_sw = fdt_decode_get_config_int(fdt,
+			"polarity_recovery_switch", -1);
+	cdata->polarity_developer_sw = fdt_decode_get_config_int(fdt,
+			"polarity_developer_switch", -1);
 
 	cdata->vbnv[0] = 0;
 	cdata->vbnv[1] = VBNV_BLOCK_SIZE;
@@ -150,6 +159,9 @@ int crossystem_data_embed_into_fdt(crossystem_data_t *cdata, void *fdt,
 	set_scalar_prop(write_protect_sw);
 	set_scalar_prop(recovery_sw);
 	set_scalar_prop(developer_sw);
+	set_scalar_prop(gpio_port_write_protect_sw);
+	set_scalar_prop(gpio_port_recovery_sw);
+	set_scalar_prop(gpio_port_developer_sw);
 	set_scalar_prop(polarity_write_protect_sw);
 	set_scalar_prop(polarity_recovery_sw);
 	set_scalar_prop(polarity_developer_sw);
@@ -190,6 +202,9 @@ void crossystem_data_dump(crossystem_data_t *cdata)
 	_p("%d",	write_protect_sw);
 	_p("%d",	recovery_sw);
 	_p("%d",	developer_sw);
+	_p("%d",	gpio_port_write_protect_sw);
+	_p("%d",	gpio_port_recovery_sw);
+	_p("%d",	gpio_port_developer_sw);
 	_p("%d",	polarity_write_protect_sw);
 	_p("%d",	polarity_recovery_sw);
 	_p("%d",	polarity_developer_sw);

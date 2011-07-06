@@ -14,6 +14,11 @@
 		hwid = "ARM SEABOARD TEST 1176";
 		machine-arch-id = <3005>;
 
+		/* Chrome OS specific GPIO port number */
+		gpio_port_write_protect_switch	= <59>;
+		gpio_port_recovery_switch	= <56>;
+		gpio_port_developer_switch	= <168>;
+
 		/* GPIO polarity: 0=active_low, 1=active_high */
 		polarity_write_protect_switch	= <1>;
 		polarity_recovery_switch	= <0>;

@@ -168,11 +168,9 @@ static uint32_t init_internal_state_bottom_half(firmware_storage_t *file,
 		reason = VBNV_RECOVERY_RO_SHARED_DATA;
 	}
 
-	if (crossystem_data_init(cdata, frid, fmap->readonly.fmap.offset,
+	if (crossystem_data_init(cdata, fdt, frid, fmap->readonly.fmap.offset,
 				_state.gbb_data, nvcxt->raw,
-				write_protect_sw, recovery_sw, developer_sw,
-				polarity_write_protect_sw, polarity_recovery_sw,
-				polarity_developer_sw)) {
+				write_protect_sw, recovery_sw, developer_sw)) {
 		VBDEBUG(PREFIX "init crossystem data fail\n");
 		reason = VBNV_RECOVERY_RO_UNSPECIFIED;
 	}
