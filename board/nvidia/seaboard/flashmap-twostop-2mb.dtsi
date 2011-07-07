@@ -1,0 +1,124 @@
+/*
+* Copyright (c) 2011 The Chromium OS Authors. All rights reserved.
+* Use of this source code is governed by a BSD-style license that can be
+* found in the LICENSE file.
+*/
+
+/*
+* This is the flash map (fmap) for a twostop firmware. It defines all the areas
+* that Chrome OS expects to find in its firmware device. The device is split
+* into a number of top-level sections, and within each are several areas.
+*
+* Available flags for each entry are: read-only, compresed.
+* All sections will be marked static in the fmap.
+*/
+
+/include/ "flashmap-ro.dtsi"
+
+/ {
+	flash@0 {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		compatible = "winbond,W25Q16BVSSIG", "cfi-flash",
+			"chromeos,flashmap";
+		reg = <0x00000000 0x00200000>;
+
+		/* ---- Section: Rewritable slot A ---- */
+		rw-a@100000 {
+			label = "rw-section-a";
+			reg = <0x00100000 0x00078000>;
+			block-lba = <0x00000022>;
+		};
+		rw-a-boot@100000 {
+			label = "fw-main-a";
+			reg = <0x00100000 0x00076000>;
+			type = "blob boot";
+		};
+		rw-a-vblock@176000 {
+			label = "vblock-a";
+			reg = <0x00176000 0x00001f00>;
+			type = "keyblock boot";
+			keyblock = "dev_firmware.keyblock";
+			signprivate = "dev_firmware_data_key.vbprivk";
+			version = <1>;
+			kernelkey = "kernel_subkey.vbpubk";
+			preamble-flags = <1>;
+		};
+		rw-a-firmware-id@177f00 {
+			label = "rw-fwid-a";
+			reg = <0x00177f00 0x00000100>;
+			read-only;
+			type = "blobstring fwid";
+		};
+
+		/* ---- Section: Rewritable slot B ---- */
+		rw-b@178000 {
+			label = "rw-section-b";
+			reg = <0x00178000 0x00078000>;
+			block-lba = <0x00000422>;
+		};
+		rw-b-boot@178000 {
+			label = "fw-main-b";
+			reg = <0x00178000 0x00076000>;
+			type = "blob boot";
+		};
+		rw-b-vblock@1ee000 {
+			label = "vblock-b";
+			reg = <0x001ee000 0x00001f00>;
+			type = "keyblock boot";
+			keyblock = "firmware.keyblock";
+			signprivate = "firmware_data_key.vbprivk";
+			version = <1>;
+			kernelkey = "kernel_subkey.vbpubk";
+			preamble-flags = <1>;
+		};
+		rw-b-firmware-id@1eff00 {
+			label = "rw-fwid-a";
+			reg = <0x001eff00 0x00000100>;
+			read-only;
+			type = "blobstring fwid";
+		};
+
+		/* ---- Section: Rewritable VPD 32 KB ---- */
+		rw-vpd-section@1f0000 {
+			label = "rw-vpd-section";
+			reg = <0x001f0000 0x00008000>;
+		};
+		rw-vpd@1f0000 {
+			label = "rw-vpd";
+			reg = <0x001f0000 0x00008000>;
+			type = "wiped";
+			wipe-value = [ff];
+		};
+
+		/* ---- Section: Rewritable shared 32 KB---- */
+		shared-section@1f8000 {
+			label = "rw-shared";
+			reg = <0x001f8000 0x00006000>;
+		};
+		shared-dev-cfg@1f8000 {
+			label = "dev-cfg";
+			reg = <0x001f8000 0x00000000>;
+			type = "wiped";
+			wipe-value = [00];
+		};
+		shared-data@1f8000 {
+			label = "shared-data";
+			reg = <0x001f8000 0x00006000>;
+			type = "wiped";
+			wipe-value = [00];
+		};
+		shared-env@1fe000 {
+			label = "shared-env";
+			reg = <0x001fe000 0x00002000>;
+
+			/*
+			* We could put the dev environment here, but U-Boot
+			* has a default built in. Devs can 'saveenv' to set
+			* this up.
+			*/
+			type = "wiped";
+			wipe-value = [00];
+		};
+	};
+};

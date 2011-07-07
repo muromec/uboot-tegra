@@ -1,0 +1,86 @@
+/*
+ * Copyright (c) 2011 The Chromium OS Authors. All rights reserved.
+ * Use of this source code is governed by a BSD-style license that can be
+ * found in the LICENSE file.
+ */
+
+/*
+ * This is a sub-fmap embedded into twostop fmap. This sub-fmap defines
+ * the layout of the R/O portion.
+ *
+ * The R/O blobs only consumes 1 MB space so that it could be possible to
+ * squeeze the final image (R/O + R/W) into 2 MB space. As a result, even if
+ * the target machine has a 4 MB flash chip and enables write-protect for the
+ * first 2 MB space, only the first 1 MB will contain R/O blobs and the rest
+ * 1 MB will be empty.
+ */
+
+/ {
+        chromeos-config {
+                twostop;                /* Two-stop boot */
+                twostop-optional;       /* One-stop optimization enabled */
+                textbase = <0xe08000>;  /* Address where U-Boot loads */
+
+                /*
+		 * Device and offset for second-stage firmware, in SPI for now
+                 * second-stage = <&emmc 0x00000080 0>;
+		 */
+        };
+
+	/*
+	 * Labels have been selected to be to compatible with existing tools,
+	 * even thought the terminology may be a little different on ARM.
+	 * Names will be capitalized and hyphen converted to underscore by
+	 * cros_bundle_firmware.
+	 */
+	flash@0 {
+                /* ---- Section: Read-only ---- */
+		ro-section@0 {
+                        label = "ro-section";
+			reg = <0x00000000 0x000f0000>;
+			read-only;
+		};
+
+		ro-boot@0 {
+			label = "boot-stub";
+			reg = <0x00000000 0x000bfb00>; /* ~785 KB */
+			read-only;
+			type = "blob signed";
+		};
+		ro-firmware-id@bfb00 {
+			label = "ro-frid";
+			reg = <0x000bfb00 0x00000100>;
+                        read-only;
+                        type = "blobstring fwid";
+		};
+
+		ro-gbb@bfc00 {
+			label = "gbb";
+			reg = <0x000bfc00 0x00020000>;
+			read-only;
+			type = "blob gbb";
+		};
+		ro-data@dfc00 {
+			label = "ro-data";
+			reg = <0x000dfc00 0x00010000>;
+			read-only;
+		};
+		ro-fmap@ffc00 {
+			label = "ro-fmap";
+			reg = <0x000efc00 0x00000400>;
+			read-only;
+			type = "fmap";
+			ver-major = <1>;
+			ver-minor = <0>;
+		};
+
+                /* ---- Section: Vital-product data (VPD) ---- */
+		ro-vpd@efc00 {
+			label = "ro-vpd";
+			reg = <0x000f0000 0x00010000>;
+			read-only;
+			type = "wiped";
+			wipe-value = [ff];
+		};
+	};
+};

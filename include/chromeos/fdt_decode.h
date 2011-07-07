@@ -18,37 +18,26 @@ struct fdt_fmap_entry {
 	uint32_t length;
 };
 
+struct fdt_firmware_entry {
+	struct fdt_fmap_entry boot;	/* U-Boot */
+	struct fdt_fmap_entry vblock;
+	struct fdt_fmap_entry firmware_id;
+	uint64_t block_lba;
+};
+
 /*
  * Only sections that are used during booting are put here. More sections will
  * be added if required.
  */
 struct fdt_twostop_fmap {
 	struct {
-		struct fdt_fmap_entry onestop_layout;
-		struct fdt_fmap_entry fwbody;
-		struct fdt_fmap_entry vblock;
-		struct fdt_fmap_entry fwid;
-	} onestop_layout;
-
-	struct {
-		struct fdt_fmap_entry readonly;
-		struct fdt_fmap_entry ro_firmware_image;
-		struct fdt_fmap_entry ro_firmware_id;
 		struct fdt_fmap_entry fmap;
 		struct fdt_fmap_entry gbb;
+		struct fdt_fmap_entry firmware_id;
 	} readonly;
 
-	struct {
-		struct fdt_fmap_entry readwrite_a;
-		struct fdt_fmap_entry rw_a_onestop;
-		uint64_t block_lba;
-	} readwrite_a;
-
-	struct {
-		struct fdt_fmap_entry readwrite_b;
-		struct fdt_fmap_entry rw_b_onestop;
-		uint64_t block_lba;
-	} readwrite_b;
+	struct fdt_firmware_entry readwrite_a;
+	struct fdt_firmware_entry readwrite_b;
 };
 
 int fdt_decode_twostop_fmap(const void *fdt, struct fdt_twostop_fmap *config);

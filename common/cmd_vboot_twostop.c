@@ -113,25 +113,24 @@ int twostop_read_firmware_id(twostop_t *tdata,
 		char *firmware_id)
 {
 	const struct fdt_twostop_fmap const *fmap = &tdata->fmap;
-	uint32_t firmware_id_offset = fmap->onestop_layout.fwid.offset;
+	const struct fdt_fmap_entry *entry;
 
 	switch (tdata->whoami) {
 	case I_AM_RO_FW:
-		firmware_id_offset = fmap->readonly.ro_firmware_id.offset;
+		entry = &fmap->readonly.firmware_id;
 		break;
 	case I_AM_RW_A_FW:
-		firmware_id_offset += fmap->readwrite_a.rw_a_onestop.offset;
+		entry = &fmap->readwrite_a.firmware_id;
 		break;
 	case I_AM_RW_B_FW:
-		firmware_id_offset += fmap->readwrite_b.rw_b_onestop.offset;
+		entry = &fmap->readwrite_b.firmware_id;
 		break;
 	default:
 		VBDEBUG(PREFIX "unknown: whoami: %d\n", tdata->whoami);
 		return -1;
 	}
 
-	return file->read(file, firmware_id_offset,
-			fmap->onestop_layout.fwid.length,
+	return file->read(file, entry->offset, entry->length,
 			firmware_id);
 }
 
@@ -280,10 +279,11 @@ boot_target_t twostop_select_boot_target(twostop_t *tdata,
 	const struct fdt_twostop_fmap const *fmap = &tdata->fmap;
 	boot_target_t target = BOOT_RECOVERY;
 	VbError_t err;
-	uint32_t base[2], voffset, vlength;
+	uint32_t vlength;
 	VbInitParams iparams;
 	VbSelectFirmwareParams fparams;
 	hasher_state_t s;
+	const struct fdt_firmware_entry *firmware_a, *firmware_b;
 
 	memset(&fparams, '\0', sizeof(fparams));
 
@@ -308,17 +308,16 @@ boot_target_t twostop_select_boot_target(twostop_t *tdata,
 	if (iparams.out_flags & VB_INIT_OUT_ENABLE_RECOVERY)
 		goto out;
 
-	voffset = fmap->onestop_layout.vblock.offset;
-	vlength = fmap->onestop_layout.vblock.length;
-
 	if (tdata->whoami == I_AM_RW_A_FW) {
-		base[0] = base[1] = fmap->readwrite_a.rw_a_onestop.offset;
+		firmware_a = firmware_b = &fmap->readwrite_a;
 	} else if (tdata->whoami == I_AM_RW_B_FW) {
-		base[0] = base[1] = fmap->readwrite_b.rw_b_onestop.offset;
+		firmware_a = firmware_b = &fmap->readwrite_b;
 	} else {
-		base[0] = fmap->readwrite_a.rw_a_onestop.offset;
-		base[1] = fmap->readwrite_b.rw_b_onestop.offset;
+		firmware_a = &fmap->readwrite_a;
+		firmware_b = &fmap->readwrite_b;
 	}
+	vlength = firmware_a->vblock.length;
+	assert(vlength == firmware_b->vblock.length);
 
 	fparams.verification_size_A = fparams.verification_size_B = vlength;
 
@@ -333,19 +332,19 @@ boot_target_t twostop_select_boot_target(twostop_t *tdata,
 		goto out;
 	}
 
-	if (file->read(file, base[0] + voffset, vlength,
+	if (file->read(file, firmware_a->vblock.offset, vlength,
 				fparams.verification_block_A)) {
 		VBDEBUG(PREFIX "fail to read vblock A\n");
 		goto out;
 	}
-	if (file->read(file, base[1] + voffset, vlength,
+	if (file->read(file, firmware_b->vblock.offset, vlength,
 				fparams.verification_block_B)) {
 		VBDEBUG(PREFIX "fail to read vblock B\n");
 		goto out;
 	}
 
-	s.fw[0].offset = base[0] + fmap->onestop_layout.fwbody.offset;
-	s.fw[1].offset = base[1] + fmap->onestop_layout.fwbody.offset;
+	s.fw[0].offset = firmware_a->boot.offset;
+	s.fw[1].offset = firmware_b->boot.offset;
 
 	s.fw[0].size = firmware_body_size((uint32_t)
 			fparams.verification_block_A);
@@ -436,6 +435,8 @@ void twostop_goto_rwfw(twostop_t *tdata, crossystem_data_t *cdata,
 	memmove((void *)CONFIG_SYS_TEXT_BASE, fw_blob, fw_size);
 
 	/* TODO go to second-stage firmware without extra cleanup */
+	VBDEBUG(PREFIX "Jumping to second-stage firmware at %#x, size %#x\n",
+		CONFIG_SYS_TEXT_BASE, fw_size);
 	cleanup_before_linux();
 	((void(*)(void))CONFIG_SYS_TEXT_BASE)();
 }

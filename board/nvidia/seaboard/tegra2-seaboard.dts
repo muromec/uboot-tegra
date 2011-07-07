@@ -2,7 +2,7 @@
 
 /memreserve/ 0x1c000000 0x04000000;
 /include/ "tegra250.dtsi"
-/include/ "flashmap-twostop-seaboard.dtsi"
+/include/ "flashmap-twostop-2mb.dtsi"
 
 / {
 	model = "NVIDIA Seaboard";
@@ -76,7 +76,7 @@
 		power-gpio = <&gpio 70 3>; /* power enable, gpio PI6 */
 	};
 
-	sdhci@c8000600 {
+	emmc: sdhci@c8000600 {
 		status = "ok";
 		width = <4>;	/* width of SDIO port */
 		removable = <0>;

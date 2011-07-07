@@ -1,0 +1,150 @@
+/*
+* Copyright (c) 2011 The Chromium OS Authors. All rights reserved.
+* Use of this source code is governed by a BSD-style license that can be
+* found in the LICENSE file.
+*/
+
+/*
+* This is the flash map (fmap) for a twostop firmware. It defines all the areas
+* that Chrome OS expects to find in its firmware device. The device is split
+* into a number of top-level sections, and within each are several areas.
+*
+* Available flags for each entry are: read-only, compresed.
+* All sections will be marked static in the fmap.
+*/
+
+/include/ "flashmap-ro.dtsi"
+
+/*
+* TODO: Although we can squeeze R/O and R/W blobs into 2 MB, we do not do
+* so because:
+*
+* - (A minor reason) Not every 4 MB flash chip can write-protect just the
+*   first 1 MB.
+*
+* - (The main reason) We do not know how many tools or scripts implicitly
+*   assume that R/O section consumes the first half 2 MB.
+*
+* In the long run, we should find and fix all those tools and scripts that
+* have incorrect implicit assumption of R/O section, but for now, we just
+* cannot squeeze the image size down to 2 MB at the risk of wrongly write-
+* protecting the R/W blobs.
+*/
+
+/ {
+	flash@0 {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		compatible = "winbond,W25Q32BVSSIG", "cfi-flash",
+			"chromeos,flashmap";
+		reg = <0x00000000 0x00400000>;
+
+		/* ---- Section: Spare. unused 1MB---- */
+		ro-spare@100000 {
+			label = "shared-spare";
+			reg = <0x00100000 0x00100000>;
+		};
+
+		/* ---- Section: Rewritable slot A ---- */
+		rw-a@200000 {
+			label = "rw-section-a";
+			reg = <0x00200000 0x00078000>;
+		};
+		rw-a-boot@200000 {
+			label = "fw-main-a";
+			reg = <0x00200000 0x00076000>;
+			type = "blob boot";
+		};
+		rw-a-vblock@276000 {
+			label = "vblock-a";
+			reg = <0x00276000 0x00001f00>;
+			type = "keyblock boot";
+			keyblock = "dev_firmware.keyblock";
+			signprivate = "dev_firmware_data_key.vbprivk";
+			version = <1>;
+			kernelkey = "kernel_subkey.vbpubk";
+			preamble-flags = <1>;
+		};
+		rw-a-firmware-id@277f00 {
+			label = "rw-fwid-a";
+			reg = <0x00277f00 0x00000100>;
+			read-only;
+			type = "blobstring fwid";
+		};
+
+		/* ---- Section: Rewritable slot B ---- */
+		rw-b@278000 {
+			label = "rw-section-b";
+			reg = <0x00278000 0x00078000>;
+		};
+		rw-b-boot@278000 {
+			label = "fw-main-b";
+			reg = <0x00278000 0x00076000>;
+			type = "blob boot";
+		};
+		rw-b-vblock@2ee000 {
+			label = "vblock-b";
+			reg = <0x002ee000 0x00001f00>;
+			type = "keyblock boot";
+			keyblock = "firmware.keyblock";
+			signprivate = "firmware_data_key.vbprivk";
+			version = <1>;
+			kernelkey = "kernel_subkey.vbpubk";
+			preamble-flags = <1>;
+		};
+		rw-b-firmware-id@2eff00 {
+			label = "rw-fwid-a";
+			reg = <0x002eff00 0x00000100>;
+			read-only;
+			type = "blobstring fwid";
+		};
+
+		/* ---- Section: Rewritable VPD 32 KB ---- */
+		rw-vpd-section@2f0000 {
+			label = "rw-vpd-section";
+			reg = <0x002f0000 0x00008000>;
+		};
+		rw-vpd@2f0000 {
+			label = "rw-vpd";
+			reg = <0x002f0000 0x00008000>;
+			type = "wiped";
+			wipe-value = [ff];
+		};
+
+		/* ---- Section: Rewritable shared 32 KB---- */
+		shared-section@2f8000 {
+			label = "rw-shared";
+			reg = <0x002f8000 0x00006000>;
+		};
+		shared-dev-cfg@2f8000 {
+			label = "dev-cfg";
+			reg = <0x002f8000 0x00000000>;
+			type = "wiped";
+			wipe-value = [00];
+		};
+		shared-data@2f8000 {
+			label = "shared-data";
+			reg = <0x002f8000 0x00006000>;
+			type = "wiped";
+			wipe-value = [00];
+		};
+		shared-env@2fe000 {
+			label = "shared-env";
+			reg = <0x002fe000 0x00002000>;
+
+			/*
+			* We could put the dev environment here, but U-Boot
+			* has a default built in. Devs can 'saveenv' to set
+			* this up.
+			*/
+			type = "wiped";
+			wipe-value = [00];
+		};
+
+		/* ---- Section: Spare. unused 1MB---- */
+		shared-spare@300000 {
+			label = "shared-spare";
+			reg = <0x00300000 0x00100000>;
+		};
+	};
+};

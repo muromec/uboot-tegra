@@ -2,7 +2,7 @@
 
 /memreserve/ 0x1c000000 0x04000000;
 /include/ "tegra250.dtsi"
-/include/ "flashmap-twostop.dtsi"
+/include/ "flashmap-twostop-4mb.dtsi"
 
 / {
 	model = "Google Aebl";
