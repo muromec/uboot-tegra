@@ -33,7 +33,7 @@
  *         boots the kernel and never returns to its caller
  */
 struct os_storage;
-int boot_kernel(struct os_storage *oss, uint64_t boot_flags,
+int load_and_boot_kernel(struct os_storage *oss, uint64_t boot_flags,
 		void *gbb_data, uint32_t gbb_size,
 		void *vbshared_data, uint32_t vbshared_size,
 		VbNvContext *nvcxt, crossystem_data_t *cdata);

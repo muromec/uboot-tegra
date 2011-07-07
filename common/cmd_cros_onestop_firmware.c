@@ -403,7 +403,7 @@ static uint32_t boot_kernel_helper(struct fdt_onestop_fmap *fmap,
 
 	crossystem_data_dump(&_state.cdata);
 
-	status = boot_kernel(oss, _state.boot_flags,
+	status = load_and_boot_kernel(oss, _state.boot_flags,
 			_state.gbb_data, fmap->readonly.gbb.length,
 			_state.shared, VB_SHARED_DATA_REC_SIZE,
 			nvcxt, cdata);
