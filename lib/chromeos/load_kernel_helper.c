@@ -12,18 +12,13 @@
 #include <chromeos/common.h>
 #include <chromeos/crossystem_data.h>
 #include <chromeos/load_kernel_helper.h>
+#include <chromeos/preboot_fdt_update.h>
 #include <chromeos/os_storage.h>
 #include <chromeos/vboot_nvstorage_helper.h>
 
 #include <load_kernel_fw.h>
 
 #define PREFIX "load_kernel_helper: "
-
-/*
- * boot_kernel_helper() uses a static global variable to communicate with
- * fit_update_fdt_before_boot(). For more information, please see commit log.
- */
-static crossystem_data_t *g_crossystem_data = NULL;
 
 /* defined in common/cmd_bootm.c */
 int do_bootm(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]);
@@ -298,7 +293,7 @@ static int boot_kernel_helper(struct os_storage *oss, LoadKernelParams *params,
 		return LOAD_KERNEL_INVALID;
 	}
 
-	g_crossystem_data = cdata;
+	set_crossystem_data(cdata);
 
 	sprintf(load_address, "0x%p", params->kernel_buffer);
 	do_bootm(NULL, 0, sizeof(argv)/sizeof(*argv), argv);
@@ -333,22 +328,4 @@ int boot_kernel(struct os_storage *oss, uint64_t boot_flags,
 		return boot_kernel_helper(oss, &params, cdata);
 
 	return status;
-}
-
-int fit_update_fdt_before_boot(char *fdt, ulong *new_size)
-{
-	uint32_t ns;
-
-	if (!g_crossystem_data) {
-		VBDEBUG(PREFIX "warning: g_crossystem_data is NULL\n");
-		return 1;
-	}
-
-	if (crossystem_data_embed_into_fdt(g_crossystem_data, fdt, &ns)) {
-		VBDEBUG(PREFIX "crossystem_data_embed_into_fdt() failed\n");
-		return 1;
-	}
-
-	*new_size = ns;
-	return 0;
 }
