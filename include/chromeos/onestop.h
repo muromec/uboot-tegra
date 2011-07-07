@@ -16,6 +16,15 @@
 #include <chromeos/fdt_decode.h>
 #include <chromeos/firmware_storage.h>
 
+/*
+ * Although second-stage firmware does not trust anything first-stage firmware
+ * tells to it because TPM says so. There are certain data that second-stage
+ * firmware cannot acquire by itself, and has to rely on first-stage firmware.
+ * Specifically, these data are whether crossystem data, such as active main
+ * firmware (A or B).
+ */
+#define CROSSYSTEM_DATA_ADDRESS 0x00100000
+
 int is_ro_firmware(void);
 
 int is_tpm_trust_ro_firmware(void);

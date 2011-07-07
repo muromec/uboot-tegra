@@ -513,7 +513,7 @@ static uint32_t rewritable_boot_init(firmware_storage_t *file,
 	w = REWRITABLE_FIRMWARE_A;
 	if (!rofw) {
 		first_stage_cdata = (crossystem_data_t *)
-			CONFIG_CROSSYSTEM_DATA_ADDRESS;
+			CROSSYSTEM_DATA_ADDRESS;
 		w = crossystem_data_get_active_main_firmware(first_stage_cdata);
 	}
 	if (crossystem_data_set_active_main_firmware(cdata, w, boot_type))

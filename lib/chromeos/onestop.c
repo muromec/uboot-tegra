@@ -155,7 +155,7 @@ uint32_t boot_rw_firmware(firmware_storage_t *file,
 		t = dev_mode ? DEVELOPER_TYPE : NORMAL_TYPE;
 		if (crossystem_data_set_active_main_firmware(cdata, w, t))
 			VBDEBUG(PREFIX "failed to set active main firmware\n");
-		memmove((void *)CONFIG_CROSSYSTEM_DATA_ADDRESS, cdata,
+		memmove((void *)CROSSYSTEM_DATA_ADDRESS, cdata,
 				sizeof(*cdata));
 
 		memmove((void *)CONFIG_SYS_TEXT_BASE, internal.fwinfo[i].fwbody,

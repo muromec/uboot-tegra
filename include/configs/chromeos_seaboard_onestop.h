@@ -9,15 +9,6 @@
 
 #include <configs/chromeos_seaboard_common.h>
 
-/*
- * Although second-stage firmware does not trust anything first-stage firmware
- * tells to it because TPM says so. There are certain data that second-stage
- * firmware cannot acquire by itself, and has to rely on first-stage firmware.
- * Specifically, these data are whether crossystem data, such as active main
- * firmware (A or B).
- */
-#define CONFIG_CROSSYSTEM_DATA_ADDRESS 0x00100000
-
 /* entry point of onestop firmware */
 #define CONFIG_CMD_CROS_ONESTOP_FIRMWARE
 
