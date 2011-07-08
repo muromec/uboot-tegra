@@ -42,9 +42,15 @@ int init_vboot_global(vb_global_t *global, firmware_storage_t *file)
 	}
 
 	/* Get GPIO status */
-	write_protect_sw = is_firmware_write_protect_gpio_asserted();
-	recovery_sw = is_recovery_mode_gpio_asserted();
-	developer_sw = is_developer_mode_gpio_asserted();
+        /* TODO(rspangler): Feed in the right polarity from the FDT.
+         * For now I'm just picking an arbitrary one to get the code
+         * to compile.  See crosbug.com/17398. */
+	write_protect_sw = is_firmware_write_protect_gpio_asserted(
+            GPIO_ACTIVE_HIGH);
+	recovery_sw = is_recovery_mode_gpio_asserted(
+            GPIO_ACTIVE_HIGH);
+	developer_sw = is_developer_mode_gpio_asserted(
+            GPIO_ACTIVE_HIGH);
 
 	if (firmware_storage_read(file, CONFIG_OFFSET_RO_FRID,
 			CONFIG_LENGTH_RO_FRID, frid)) {
@@ -57,7 +63,9 @@ int init_vboot_global(vb_global_t *global, firmware_storage_t *file)
 		return 1;
 	}
 
-	if (crossystem_data_init(&global->cdata_blob, frid,
+        /* TODO(rspangler): Feed in the fdt; for now I'm passing NULL.
+         * See crosbug.com/17398. */
+	if (crossystem_data_init(&global->cdata_blob, NULL, frid,
 			CONFIG_OFFSET_FMAP, global->gbb_data, nvraw,
 			write_protect_sw, recovery_sw, developer_sw)) {
 		VbExDebug(PREFIX "Failed to init crossystem data!\n");

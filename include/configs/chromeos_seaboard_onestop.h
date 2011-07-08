@@ -21,4 +21,7 @@
 /* entry point of onestop firmware */
 #define CONFIG_CMD_CROS_ONESTOP_FIRMWARE
 
+/* Need the wrapper APIs now */
+#define CONFIG_VBOOT_WRAPPER
+
 #endif /* __configs_chromeos_seaboard_onestop_h__ */
