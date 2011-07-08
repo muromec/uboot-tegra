@@ -65,6 +65,12 @@
 #define CONFIG_SYS_NS16550_REG_SIZE	1
 #define CONFIG_SYS_OXPCIE952
 
+#define CONFIG_CONSOLE_MUX
+#define CONFIG_SYS_CONSOLE_IS_IN_ENV
+#define CONFIG_STD_DEVICES_SETTINGS     "stdin=vga,serial\0" \
+                                        "stdout=vga,serial\0" \
+                                        "stderr=vga,serial\0"
+
 /* max. 1 IDE bus	*/
 #define CONFIG_SYS_IDE_MAXBUS		1
 /* max. 1 drive per IDE bus */
@@ -147,6 +153,7 @@
 #define CONFIG_EXTRA_ENV_SETTINGS       	"devtype=ide\0"\
 						"devnum=0\0"\
 						"devname=sda\0"\
+						CONFIG_STD_DEVICES_SETTINGS \
 						"set_bootargs=setenv bootargs "\
 							"console=uart8250,mmio,0xe0401000,115200n8 "\
 							"root=/dev/${devname}3 "\
