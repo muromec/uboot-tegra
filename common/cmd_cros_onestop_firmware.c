@@ -696,9 +696,26 @@ int do_cros_onestop_firmware(cmd_tbl_t *cmdtp, int flag, int argc,
 			      &_state.cdata, &nvcxt, &dev_mode);
 	if (reason == VBNV_COMMAND_PROMPT)
 		return 0;
-	if (reason != REBOOT_TO_CURRENT_MODE)
-		recovery_boot(&fmap, &os_storage, &_state.cdata, reason,
-			      _state.boot_flags & BOOT_FLAG_DEVELOPER, &nvcxt);
+	if (reason != REBOOT_TO_CURRENT_MODE) {
+		if (is_ro_firmware()) {
+			VBDEBUG(PREFIX "enter r/o recovery boot\n");
+			recovery_boot(&fmap, &os_storage, &_state.cdata, reason,
+					_state.boot_flags & BOOT_FLAG_DEVELOPER, &nvcxt);
+		} else {
+			/*
+			 * We don't use r/w's recovery boot code. And even if
+			 * we fail to write back recovery request, we reboot
+			 * anyway.
+			 */
+			VBDEBUG(PREFIX "reboot to r/o recovery\n");
+			if (VbNvSet(&nvcxt, VBNV_RECOVERY_REQUEST, reason))
+				VBDEBUG(PREFIX "fail to clear recovery request\n");
+			if (VbNvTeardown(&nvcxt))
+				VBDEBUG(PREFIX "fail to tear down nvcontext\n");
+			if (nvcxt.raw_changed && write_nvcontext(&nvcxt))
+				VBDEBUG(PREFIX "fail to write back nvcontext\n");
+		}
+	}
 	cold_reboot();
 	return 0;
 }
