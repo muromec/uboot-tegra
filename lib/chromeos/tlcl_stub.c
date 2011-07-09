@@ -10,18 +10,19 @@
 
 #include <config.h>
 #include <common.h>
-#include <tlcl_stub.h>
 #include <tpm.h>
+#include <tss_constants.h>
+#include <vboot_api.h>
 
 /* A simple TPM library implementation for now */
 
-uint32_t TlclStubInit(void)
+uint32_t VbExTpmInit(void)
 {
 #ifdef CONFIG_HARDWARE_TPM
 	int ret = tis_init();
 	if (ret)
 		return TPM_E_IOERROR;
-	/* tpm-lite lib doesn't call TlclOpenDevice after TlclStubInit */
+	/* tpm-lite lib doesn't call VbExTpmOpen after VbExTpmInit */
 	ret = tis_open();
 	if (ret)
 		return TPM_E_IOERROR;
@@ -29,7 +30,7 @@ uint32_t TlclStubInit(void)
 	return TPM_SUCCESS;
 }
 
-uint32_t TlclCloseDevice(void)
+uint32_t VbExTpmClose(void)
 {
 #ifdef CONFIG_HARDWARE_TPM
 	int ret = tis_close();
@@ -39,7 +40,7 @@ uint32_t TlclCloseDevice(void)
 	return TPM_SUCCESS;
 }
 
-uint32_t TlclOpenDevice(void)
+uint32_t VbExTpmOpen(void)
 {
 #ifdef CONFIG_HARDWARE_TPM
 	int ret = tis_open();
@@ -49,7 +50,7 @@ uint32_t TlclOpenDevice(void)
 	return TPM_SUCCESS;
 }
 
-uint32_t TlclStubSendReceive(const uint8_t* request, int request_length,
+uint32_t VbExTpmStubSendReceive(const uint8_t* request, int request_length,
 		uint8_t* response, int max_length)
 {
 #ifdef CONFIG_HARDWARE_TPM

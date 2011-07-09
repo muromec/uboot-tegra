@@ -25,12 +25,12 @@
 #include <chromeos/power_management.h>
 #include <chromeos/vboot_nvstorage_helper.h>
 
-#include <boot_device.h>
 #include <bmpblk_header.h>
 #include <load_kernel_fw.h>
-#include <tlcl_stub.h>
+#include <tss_constants.h>
 #include <vboot_nvstorage.h>
 #include <vboot_struct.h>
+#include <vboot_api.h>
 
 #define PREFIX "cros_onestop_firmware: "
 
@@ -519,7 +519,7 @@ static uint32_t rewritable_boot_init(firmware_storage_t *file,
 	if (crossystem_data_set_active_main_firmware(cdata, w, boot_type))
 		VBDEBUG(PREFIX "failed to set active main firmware\n");
 
-	if (TlclStubInit() != TPM_SUCCESS) {
+	if (VbExTpmInit() != TPM_SUCCESS) {
 		VBDEBUG(PREFIX "fail to init tpm\n");
 		return VBNV_RECOVERY_RW_TPM_ERROR;
 	}

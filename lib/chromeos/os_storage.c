@@ -17,7 +17,7 @@
 #include <chromeos/os_storage.h>
 #include <linux/string.h> /* for strcmp */
 
-#include <boot_device.h>
+#include <vboot_api.h>
 
 #define PREFIX "os_storage: "
 

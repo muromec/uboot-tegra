@@ -23,11 +23,11 @@
 #include <chromeos/power_management.h>
 #include <chromeos/vboot_nvstorage_helper.h>
 
-#include <boot_device.h>
 #include <load_kernel_fw.h>
-#include <tlcl_stub.h>
+#include <tss_constants.h>
 #include <vboot_nvstorage.h>
 #include <vboot_struct.h>
+#include <vboot_api.h>
 
 #define PREFIX "cros_normal_firmware: "
 
@@ -60,7 +60,7 @@ int do_cros_normal_firmware(cmd_tbl_t *cmdtp, int flag, int argc,
 	uint64_t gbb_size = 0;
 	uint32_t reason = VBNV_RECOVERY_RW_UNSPECIFIED;
 
-	if (TlclStubInit() != TPM_SUCCESS) {
+	if (VbExTpmInit() != TPM_SUCCESS) {
 		VBDEBUG(PREFIX "fail to init tpm\n");
 		reboot_to_recovery_mode(VBNV_RECOVERY_RW_TPM_ERROR);
 	}

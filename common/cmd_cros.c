@@ -26,12 +26,12 @@
 #include <chromeos/os_storage.h>
 
 /* Verify Boot interface */
-#include <boot_device.h>
 #include <gbb_header.h>
 #include <load_firmware_fw.h>
 #include <load_kernel_fw.h>
 #include <vboot_nvstorage.h>
 #include <vboot_struct.h>
+#include <vboot_api.h>
 
 #define USAGE(ret, cmdtp, fmt, ...) do { \
 	printf(fmt, ##__VA_ARGS__); \

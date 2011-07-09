@@ -23,7 +23,8 @@
 #include <chromeos/vboot_nvstorage_helper.h>
 
 #include <bmpblk_header.h>
-#include <tlcl_stub.h>
+#include <tss_constants.h>
+#include <vboot_api.h>
 
 #define PREFIX "cros_developer_firmware: "
 
@@ -72,7 +73,7 @@ int do_cros_developer_firmware(cmd_tbl_t *cmdtp, int flag, int argc,
 		reboot_to_recovery_mode(VBNV_RECOVERY_RW_DEV_MISMATCH);
 	}
 
-	if (TlclStubInit() != TPM_SUCCESS) {
+	if (VbExTpmInit() != TPM_SUCCESS) {
 		VBDEBUG(PREFIX "fail to init tpm\n");
 		reboot_to_recovery_mode(VBNV_RECOVERY_RW_TPM_ERROR);
 	}
