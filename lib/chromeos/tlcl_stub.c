@@ -8,63 +8,56 @@
  * Software Foundation.
  */
 
-#include <config.h>
 #include <common.h>
+#include <config.h>
 #include <tpm.h>
+
+/* Import the header files from vboot_reference. */
 #include <tss_constants.h>
 #include <vboot_api.h>
 
-/* A simple TPM library implementation for now */
+VbError_t VbExTpmInit(void)
+{
+/* TODO According to FDT, select the real TPM path or just returning success. */
+#ifdef CONFIG_HARDWARE_TPM
+	if (tis_init())
+		return TPM_E_IOERROR;
+	/* tpm_lite lib doesn't call VbExTpmOpene after VbExTpmInit. */
+	return VbExTpmOpen();
+#endif
+	return TPM_SUCCESS;
+}
 
-uint32_t VbExTpmInit(void)
+VbError_t VbExTpmClose(void)
 {
 #ifdef CONFIG_HARDWARE_TPM
-	int ret = tis_init();
-	if (ret)
-		return TPM_E_IOERROR;
-	/* tpm-lite lib doesn't call VbExTpmOpen after VbExTpmInit */
-	ret = tis_open();
-	if (ret)
+	if (tis_close())
 		return TPM_E_IOERROR;
 #endif
 	return TPM_SUCCESS;
 }
 
-uint32_t VbExTpmClose(void)
+VbError_t VbExTpmOpen(void)
 {
 #ifdef CONFIG_HARDWARE_TPM
-	int ret = tis_close();
-	if (ret)
+	if (tis_open())
 		return TPM_E_IOERROR;
 #endif
 	return TPM_SUCCESS;
 }
 
-uint32_t VbExTpmOpen(void)
+VbError_t VbExTpmSendReceive(const uint8_t* request, uint32_t request_length,
+		uint8_t* response, uint32_t* response_length)
 {
 #ifdef CONFIG_HARDWARE_TPM
-	int ret = tis_open();
-	if (ret)
-		return TPM_E_IOERROR;
-#endif
-	return TPM_SUCCESS;
-}
-
-uint32_t VbExTpmStubSendReceive(const uint8_t* request, int request_length,
-		uint8_t* response, int max_length)
-{
-#ifdef CONFIG_HARDWARE_TPM
-	int ret;
-	size_t recv_len = (size_t) max_length;
-	ret= tis_sendrecv(request, request_length, response, &recv_len);
-	if (ret)
+	if (tis_sendrecv(request, request_length, response, response_length))
 		return TPM_E_IOERROR;
 #else
 	/* Make a successful response */
 	uint8_t successful_response[10] =
 			{0x0, 0x0, 0x0, 0x0, 0x0, 0xa, 0x0, 0x0, 0x0, 0x0};
 	memcpy(response, successful_response, 10);
+	*response_length = 10;
 #endif
 	return TPM_SUCCESS;
 }
-

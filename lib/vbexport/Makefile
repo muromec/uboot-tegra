@@ -18,7 +18,6 @@ COBJS-$(CONFIG_VBOOT_WRAPPER) += keyboard.o
 COBJS-$(CONFIG_VBOOT_WRAPPER) += load_firmware.o
 COBJS-$(CONFIG_VBOOT_WRAPPER) += misc.o
 COBJS-$(CONFIG_VBOOT_WRAPPER) += nvstorage.o
-COBJS-$(CONFIG_VBOOT_WRAPPER) += tlcl_stub.o
 COBJS-$(CONFIG_VBOOT_WRAPPER) += utility.o
 
 COBJS	:= $(COBJS-y)
