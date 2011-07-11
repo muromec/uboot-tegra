@@ -1,0 +1,139 @@
+/dts-v1/;
+
+/memreserve/ 0x1c000000 0x04000000;
+/include/ "tegra250.dtsi"
+/include/ "flashmap-twostop-4mb.dtsi"
+
+/ {
+	model = "Google Arthur";
+	compatible = "google,arthur", "nvidia,tegra250";
+
+	config {
+		silent_console = <0>;
+		odmdata = <0x300d8011>;
+		hwid = "ARM ARTHUR TEST 3403";
+		machine-arch-id = <3474>;
+
+		/* Chrome OS specific GPIO port number */
+		gpio_port_write_protect_switch	= <59>; /* GMI_AD11 - PH3 */
+		gpio_port_recovery_switch	= <56>; /* GMI_AD08 - PH0 */
+		gpio_port_developer_switch	= <168>; /* GPIO_PV0 - PV0 */
+
+		/* GPIO polarity: 0=active_low, 1=active_high */
+		polarity_write_protect_switch	= <1>;
+		polarity_recovery_switch	= <0>;
+		polarity_developer_switch	= <1>;
+	};
+
+	aliases {
+		console = "/serial@70006040";
+                usb0 = "/usb@0xc5000000";
+
+		sdmmc0 = "/sdhci@c8000600";
+
+		i2c0 = "/i2c@0x7000d000";
+		i2c1 = "/i2c@0x7000c000";
+		i2c2 = "/i2c@0x7000c400";
+		i2c3 = "/i2c@0x7000c500";
+	};
+
+	chosen {
+		bootargs = "";
+	};
+
+	memory {
+		device_type = "memory";
+		reg = <0x00000000 0x40000000>;
+	};
+
+	serial@70006040 {
+		status = "ok";
+		clock-frequency = <216000000>;
+	};
+
+	sdhci@c8000600 {
+		status = "ok";
+		width = <4>;	/* width of SDIO port */
+		removable = <0>;
+	};
+
+	lcd {
+		compatible = "nvidia,tegra2-lcd";
+		width = <1366>;
+		height = <910>;
+		bits_per_pixel = <16>;
+		pwfm = <&pwfm2>;
+		display = <&display1>;
+		frame-buffer = <0x1C022000>;
+
+		pixel_clock = <82400000>;
+
+		/* Timing: ref_to_sync, sync_width. back_porch, front_porch */
+		horiz_timing = <11 32 112 48>;
+		vert_timing = <1 5 20 2>;
+
+		/* Parameter 3 bit 0:1=output, 0=input; bit 1:1=high, 0=low */
+		gpios = <&gpio 28 3>,	/* backlight PD4 */
+			<&gpio 10 3>,	/* lvds shutdown PB2 */
+			<&gpio 176 3>,	/* backlight vdd PW0 */
+			<&gpio 22 3>;	/* enable vdd pnl PC6 */
+	};
+
+	usb@0xc5000000 {
+		status = "ok";
+		host-mode = <1>;
+	};
+
+	kbc@0x7000e200 {
+		keycode-plain    = [00  00  DD  00  DC  00  00  00
+				    00  1b  09  '`' 'a' 'z' '1' 'q'
+				    00  00  00  00  'd' 'c' '3' 'e'
+				    00  00  00  00  00  00  00  00
+				    'b' 'g' 't' '5' 'f' 'v' '4' 'r'
+				    00  00  00  00  's' 'x' '2' 'w'
+				    00  00  ']' 00  'k' ',' '8' 'i'
+				    00  00  00  00  00  00  00  00
+				    'n' 'h' 'y' '6' 'j' 'm' '7' 'u'
+				    00  00  00  00  00  DF  00  DF
+				    '=' 5D  '[' '-' ';' '/' '0' 'p'
+				    00  00  00  00  'l' '.' '9' 'o'
+				    00  00  00  00  00  00  00  00
+				    00  00  00  00  00  00  00  00
+				    00  08  00  5C  0D  ' ' 00  00
+				    00  00  00  00  00  00  00  00];
+
+		keycode-shift	 = [00  00  00  00  00  00  00  00
+				    00  1B  09  '~' 'A' 'Z' '!' 'Q'
+				    00  00  00  00  'D' 'C' '#' 'E'
+				    00  00  00  00  00  00  00  00
+				    'B' 'G' 'T' '%' 'F' 'V' '$' 'R'
+				    00  00  00  00  'S' 'X' '@' 'W'
+				    00  00  '}' 00  'K' '<' '*' 'I'
+				    00  00  00  00  00  00  00  00
+				    'N' 'H' 'Y' '^' 'J' 'M' '&' 'U'
+				    00  00  00  00  00  00  00  00
+				    '+' '"' '{' '_' ':' '?' ')' 'P'
+				    00  00  00  00  'L' '>' '(' 'O'
+				    00  00  00  00  00  00  00  00
+				    00  00  00  00  00  00  00  00
+				    00  08  00  '|' 0D  ' ' 00  00
+				    00  00  00  00  00  00  00  00];
+
+		keycode-ctrl     = [00  00  00  00  00  00  00  00
+				    00  00  00  00  01  1a  00  11
+				    00  00  00  00  04  03  00  05
+				    00  00  00  00  00  00  00  00
+				    02  07  14  00  06  16  00  12
+				    00  00  00  00  13  18  00  17
+				    00  00  00  00  0b  00  00  09
+				    00  00  00  00  00  00  00  00
+				    0e  08  19  00  0a  0d  00  15
+				    00  00  00  00  00  00  00  00
+				    00  00  00  00  00  00  00  10
+				    00  00  00  00  0c  00  00  0f
+				    00  00  00  00  00  00  00  00
+				    00  00  00  00  00  00  00  00
+				    00  00  00  00  00  00  00  00
+				    00  00  00  00  00  00  00  00];
+	};
+};
