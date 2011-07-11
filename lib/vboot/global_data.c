@@ -9,11 +9,14 @@
  */
 
 #include <common.h>
+#include <fdt_decode.h>
 #include <vboot_api.h>
 #include <chromeos/gpio.h>
 #include <vboot/global_data.h>
 
 #define PREFIX		"global_data: "
+
+DECLARE_GLOBAL_DATA_PTR;
 
 /* The VBoot Global Data is stored in a region just above the stack region. */
 #define VBGLOBAL_BASE	(CONFIG_STACKBASE + CONFIG_STACKSIZE)
@@ -25,9 +28,12 @@ vb_global_t *get_vboot_global(void)
 
 int init_vboot_global(vb_global_t *global, firmware_storage_t *file)
 {
+	void *fdt = (void *)gd->blob;
+        int polarity_write_protect_sw, polarity_recovery_sw,
+            polarity_developer_sw;
+	int write_protect_sw, recovery_sw, developer_sw;
 	char frid[ID_LEN];
 	uint8_t nvraw[VBNV_BLOCK_SIZE];
-	int write_protect_sw, recovery_sw, developer_sw;
 
 	global->version = VBGLOBAL_VERSION;
 	memcpy(global->signature, VBGLOBAL_SIGNATURE,
@@ -42,15 +48,19 @@ int init_vboot_global(vb_global_t *global, firmware_storage_t *file)
 	}
 
 	/* Get GPIO status */
-        /* TODO(rspangler): Feed in the right polarity from the FDT.
-         * For now I'm just picking an arbitrary one to get the code
-         * to compile.  See crosbug.com/17398. */
+        polarity_write_protect_sw = fdt_decode_get_config_int(fdt,
+                        "polarity_write_protect_switch", GPIO_ACTIVE_HIGH);
+        polarity_recovery_sw = fdt_decode_get_config_int(fdt,
+                        "polarity_recovery_switch", GPIO_ACTIVE_HIGH);
+        polarity_developer_sw = fdt_decode_get_config_int(fdt,
+                        "polarity_developer_switch", GPIO_ACTIVE_HIGH);
+
 	write_protect_sw = is_firmware_write_protect_gpio_asserted(
-            GPIO_ACTIVE_HIGH);
+			polarity_write_protect_sw);
 	recovery_sw = is_recovery_mode_gpio_asserted(
-            GPIO_ACTIVE_HIGH);
+			polarity_recovery_sw);
 	developer_sw = is_developer_mode_gpio_asserted(
-            GPIO_ACTIVE_HIGH);
+			polarity_developer_sw);
 
 	if (firmware_storage_read(file, CONFIG_OFFSET_RO_FRID,
 			CONFIG_LENGTH_RO_FRID, frid)) {
@@ -63,9 +73,7 @@ int init_vboot_global(vb_global_t *global, firmware_storage_t *file)
 		return 1;
 	}
 
-        /* TODO(rspangler): Feed in the fdt; for now I'm passing NULL.
-         * See crosbug.com/17398. */
-	if (crossystem_data_init(&global->cdata_blob, NULL, frid,
+	if (crossystem_data_init(&global->cdata_blob, fdt, frid,
 			CONFIG_OFFSET_FMAP, global->gbb_data, nvraw,
 			write_protect_sw, recovery_sw, developer_sw)) {
 		VbExDebug(PREFIX "Failed to init crossystem data!\n");
