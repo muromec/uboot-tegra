@@ -103,11 +103,15 @@ void spi_init(void)
 	pinmux_set_func(PINGRP_GMD, PMUX_FUNC_SFLASH);
 	pinmux_tristate_disable(PINGRP_LSPI);
 
+#ifndef CONFIG_SPI_UART_SWITCH
 	/*
 	 * NOTE:
-	 * Don't set PinMux bits 3:2 to SPI here or subsequent UART data
-	 * won't go out! It'll be correctly set in spi_uart_switch().
+	 * Only set PinMux bits 3:2 to SPI here on boards that don't have the
+	 * SPI UART switch or subsequent UART data won't go out!  See
+	 * spi_uart_switch().
 	 */
+	pinmux_set_func(PINGRP_GMC, PMUX_FUNC_SFLASH);
+#endif
 }
 
 int spi_claim_bus(struct spi_slave *slave)
