@@ -34,12 +34,12 @@
 			/* size: 512 KB */
 			reg = <0x00000000 0x00080000>;
 
-			/* u-boot image including fdt: first ~450 KB */
+			/* u-boot image including fdt: first ~503 KB */
 			firmware-image {
 				reg = <0x00000000 0x0007df00>;
 			};
 
-			/* verification block: 64 KB */
+			/* verification block: 8 KB */
 			verification-block {
 				reg = <0x0007df00 0x00002000>;
 			};

@@ -20,7 +20,8 @@ int firmware_storage_read(firmware_storage_t *file,
 	ssize_t size;
 	size_t remain;
 
-	VBDEBUG(PREFIX "read\n");
+	VBDEBUG(PREFIX "read(offset=%08x, count=%08x, buffer=%p)\n",
+			(int)offset, (int)count, buf);
 
 	if (file->seek(file->context, offset, SEEK_SET) < 0) {
 		VBDEBUG(PREFIX "seek to address 0x%08lx fail\n", offset);
@@ -54,7 +55,8 @@ int firmware_storage_write(firmware_storage_t *file,
 	ssize_t size;
 	size_t remain;
 
-	VBDEBUG(PREFIX "write\n");
+	VBDEBUG(PREFIX "write(offset=%08x, count=%08x, buffer=%p)\n",
+			(int)offset, (int)count, buf);
 
 	if (file->seek(file->context, offset, SEEK_SET) < 0) {
 		VBDEBUG(PREFIX "seek to address 0x%08lx fail\n", offset);

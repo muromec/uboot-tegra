@@ -47,7 +47,6 @@ int GetFirmwareBody(LoadFirmwareParams *params, uint64_t index)
 		return 1;
 	}
 
-	/* TODO load firmware from mmc */
 	if (firmware_storage_read(s->file, s->fwinfo[i].offset,
 				s->fwinfo[i].size, s->fwinfo[i].fwbody)) {
 		VBDEBUG(PREFIX "fail to read firmware body: %d\n", i);
@@ -75,18 +74,20 @@ uint32_t boot_rw_firmware(firmware_storage_t *file,
 		uint8_t *gbb_data, crossystem_data_t *cdata,
 		VbNvContext *nvcxt)
 {
-	/* TODO Read r/w firmware from MMC */
-
 	int status = LOAD_FIRMWARE_RECOVERY;
 	LoadFirmwareParams params;
 	get_firmware_body_state_t internal;
 	uint8_t vbshared[VB_SHARED_DATA_REC_SIZE];
 	int i, w, t;
 
-	internal.fwinfo[0].vblock = malloc(fmap->onestop_layout.vblock.length);
-	internal.fwinfo[1].vblock = malloc(fmap->onestop_layout.vblock.length);
-	internal.fwinfo[0].fwbody = malloc(fmap->onestop_layout.fwbody.length);
-	internal.fwinfo[1].fwbody = malloc(fmap->onestop_layout.fwbody.length);
+	internal.fwinfo[0].vblock = memalign(CACHE_LINE_SIZE,
+			fmap->onestop_layout.vblock.length);
+	internal.fwinfo[1].vblock = memalign(CACHE_LINE_SIZE,
+			fmap->onestop_layout.vblock.length);
+	internal.fwinfo[0].fwbody = memalign(CACHE_LINE_SIZE,
+			fmap->onestop_layout.fwbody.length);
+	internal.fwinfo[1].fwbody = memalign(CACHE_LINE_SIZE,
+			fmap->onestop_layout.fwbody.length);
 
 	if (firmware_storage_read(file,
 				fmap->readwrite_a.offset +
@@ -97,7 +98,7 @@ uint32_t boot_rw_firmware(firmware_storage_t *file,
 		return VBNV_RECOVERY_RO_INVALID_RW;
 	}
 	if (firmware_storage_read(file,
-				fmap->readwrite_a.offset +
+				fmap->readwrite_b.offset +
 				fmap->onestop_layout.vblock.offset,
 				fmap->onestop_layout.vblock.length,
 				internal.fwinfo[1].vblock)) {
@@ -165,6 +166,11 @@ uint32_t boot_rw_firmware(firmware_storage_t *file,
 		cleanup_before_linux();
 		((void(*)(void))CONFIG_SYS_TEXT_BASE)();
 	}
+
+	free(internal.fwinfo[0].vblock);
+	free(internal.fwinfo[1].vblock);
+	free(internal.fwinfo[0].fwbody);
+	free(internal.fwinfo[1].fwbody);
 
 	VBDEBUG(PREFIX "fail to boot to r/w firmware; image broken?\n");
 	return VBNV_RECOVERY_RO_INVALID_RW;

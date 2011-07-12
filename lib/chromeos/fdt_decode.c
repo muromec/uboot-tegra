@@ -59,6 +59,12 @@ int fdt_decode_onestop_fmap(const void *blob, struct fdt_onestop_fmap *config)
 		return fmap_offset;
 
 	offset = fdt_decode_fmap_entry(blob, fmap_offset,
+			"/onestop-layout",
+			&config->onestop_layout.onestop_layout);
+	if (offset < 0)
+		return offset;
+
+	offset = fdt_decode_fmap_entry(blob, fmap_offset,
 			"/onestop-layout/firmware-image",
 			&config->onestop_layout.fwbody);
 	if (offset < 0)
@@ -106,6 +112,7 @@ static void dump_fmap_entry(struct fdt_fmap_entry *e, const char *name)
 
 void dump_fmap(struct fdt_onestop_fmap *config)
 {
+	dump_fmap_entry(&config->onestop_layout.onestop_layout, "onestop_layout");
 	dump_fmap_entry(&config->onestop_layout.fwbody, "fwbody");
 	dump_fmap_entry(&config->onestop_layout.vblock, "vblock");
 	dump_fmap_entry(&config->onestop_layout.fwid, "fwid");

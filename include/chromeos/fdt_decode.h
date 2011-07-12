@@ -20,6 +20,7 @@ struct fdt_fmap_entry {
 
 struct fdt_onestop_fmap {
 	struct {
+		struct fdt_fmap_entry onestop_layout;
 		struct fdt_fmap_entry fwbody;
 		struct fdt_fmap_entry vblock;
 		struct fdt_fmap_entry fwid;
