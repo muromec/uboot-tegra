@@ -77,10 +77,18 @@ void gpio_early_init_uart(const void *blob)
 void gpio_config_uart(const void *blob)
 {
 	get_config(blob, &local);
-	switch_pos = SWITCH_BOTH;
 	if (local.gpio != -1) {
 		gpio_direction_output(local.gpio, 0);
 		switch_pos = SWITCH_UART;
+	}
+	else {
+		/*
+		 * If we're here we don't have a SPI switch; go ahead and
+		 * enable the SPI now.  We didn't in spi_init() so we wouldn't
+		 * kill the UART.
+		 */
+		pinmux_set_func(PINGRP_GMC, PMUX_FUNC_SFLASH);
+		switch_pos = SWITCH_BOTH;
 	}
 }
 
