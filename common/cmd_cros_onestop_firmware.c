@@ -119,7 +119,7 @@ static uint32_t init_internal_state_nvcontext(VbNvContext *nvcxt,
  *         fails
  */
 static uint32_t init_internal_state_bottom_half(firmware_storage_t *file,
-		struct fdt_onestop_fmap *fmap, void *fdt,
+		struct fdt_twostop_fmap *fmap, void *fdt,
 		crossystem_data_t *cdata, int *dev_mode, VbNvContext *nvcxt)
 {
 	char frid[ID_LEN];
@@ -194,7 +194,7 @@ static uint32_t init_internal_state_bottom_half(firmware_storage_t *file,
  *         fails
  */
 static uint32_t init_internal_state(firmware_storage_t *file,
-		struct fdt_onestop_fmap *fmap,
+		struct fdt_twostop_fmap *fmap,
 		void *fdt, crossystem_data_t *cdata, int *dev_mode,
 		struct os_storage *oss, VbNvContext *nvcxt)
 {
@@ -205,7 +205,7 @@ static uint32_t init_internal_state(firmware_storage_t *file,
 	/* sad enough, SCREEN_BLANK != 0 */
 	_state.current_screen = SCREEN_BLANK;
 
-	if (fdt_decode_onestop_fmap(fdt, fmap)) {
+	if (fdt_decode_twostop_fmap(fdt, fmap)) {
 		VBDEBUG(PREFIX "fatal: fail to load fmap config from fdt\n");
 		return REBOOT_TO_CURRENT_MODE;
 	}
@@ -283,7 +283,7 @@ struct RSAPublicKey *PublicKeyToRSA(const VbPublicKey *key);
  *         fails
  */
 static uint32_t load_kernel_subkey_a(firmware_storage_t *file,
-		struct fdt_onestop_fmap *fmap, VbKeyBlockHeader *key_block)
+		struct fdt_twostop_fmap *fmap, VbKeyBlockHeader *key_block)
 {
 	VbFirmwarePreambleHeader *preamble;
 	struct RSAPublicKey *data_key;
@@ -329,7 +329,7 @@ static uint32_t load_kernel_subkey_a(firmware_storage_t *file,
  *         fails
  */
 static uint32_t init_vbshared_data(firmware_storage_t *file,
-		struct fdt_onestop_fmap *fmap, int dev_mode, VbNvContext *nvcxt)
+		struct fdt_twostop_fmap *fmap, int dev_mode, VbNvContext *nvcxt)
 {
 	/*
 	 * This function is adapted from LoadFirmware(). The differences
@@ -395,7 +395,7 @@ static void show_screen(ScreenIndex screen)
  *
  * @return recvoery reason or REBOOT_TO_CURRENT_MODE
  */
-static uint32_t boot_kernel_helper(struct fdt_onestop_fmap *fmap,
+static uint32_t boot_kernel_helper(struct fdt_twostop_fmap *fmap,
 		struct os_storage *oss, crossystem_data_t *cdata,
 		VbNvContext *nvcxt)
 {
@@ -435,7 +435,7 @@ static uint32_t boot_kernel_helper(struct fdt_onestop_fmap *fmap,
  * @param reason	recovery reason
  * @param wait_for_unplug wait until user unplugs SD/USB before continuing
  */
-static void recovery_boot(struct fdt_onestop_fmap *fmap,
+static void recovery_boot(struct fdt_twostop_fmap *fmap,
 		struct os_storage *oss, crossystem_data_t *cdata,
 		uint32_t reason, int wait_for_unplug, VbNvContext *nvcxt)
 {
@@ -492,7 +492,7 @@ static void recovery_boot(struct fdt_onestop_fmap *fmap,
  *         fails
  */
 static uint32_t rewritable_boot_init(firmware_storage_t *file,
-		struct fdt_onestop_fmap *fmap, int rofw,
+		struct fdt_twostop_fmap *fmap, int rofw,
 		crossystem_data_t *cdata, int boot_type)
 {
 	char fwid[ID_LEN];
@@ -533,7 +533,7 @@ static uint32_t rewritable_boot_init(firmware_storage_t *file,
  * @return VBNV_RECOVERY_NOT_REQUESTED when caller has to boot from internal
  *         storage device; recovery reason when caller has to go to recovery.
  */
-static uint32_t developer_boot(struct fdt_onestop_fmap *fmap,
+static uint32_t developer_boot(struct fdt_twostop_fmap *fmap,
 		struct os_storage *oss, crossystem_data_t *cdata,
 		VbNvContext *nvcxt)
 {
@@ -609,7 +609,7 @@ static uint32_t developer_boot(struct fdt_onestop_fmap *fmap,
  *
  * @return recovery reason or REBOOT_TO_CURRENT_MODE
  */
-static uint32_t normal_boot(struct fdt_onestop_fmap *fmap,
+static uint32_t normal_boot(struct fdt_twostop_fmap *fmap,
 		struct os_storage *oss, crossystem_data_t *cdata,
 		VbNvContext *nvcxt)
 {
@@ -640,7 +640,7 @@ static uint32_t normal_boot(struct fdt_onestop_fmap *fmap,
  *	anything else		Go into recovery
  */
 static unsigned onestop_boot(firmware_storage_t *file,
-		struct fdt_onestop_fmap *fmap, struct os_storage *oss,
+		struct fdt_twostop_fmap *fmap, struct os_storage *oss,
 		crossystem_data_t *cdata, VbNvContext *nvcxt,
 		int *dev_mode)
 {
@@ -685,7 +685,7 @@ int do_cros_onestop_firmware(cmd_tbl_t *cmdtp, int flag, int argc,
 		char * const argv[])
 {
 	unsigned reason;
-	struct fdt_onestop_fmap fmap;
+	struct fdt_twostop_fmap fmap;
 	struct os_storage os_storage;
 	firmware_storage_t file;
 	VbNvContext nvcxt;

@@ -70,7 +70,7 @@ uint32_t get_fwbody_size(uint32_t vblock_address)
 }
 
 uint32_t boot_rw_firmware(firmware_storage_t *file,
-		struct fdt_onestop_fmap *fmap, int dev_mode,
+		struct fdt_twostop_fmap *fmap, int dev_mode,
 		uint8_t *gbb_data, crossystem_data_t *cdata,
 		VbNvContext *nvcxt)
 {
@@ -90,7 +90,7 @@ uint32_t boot_rw_firmware(firmware_storage_t *file,
 			fmap->onestop_layout.fwbody.length);
 
 	if (firmware_storage_read(file,
-				fmap->readwrite_a.offset +
+				fmap->readwrite_a.rw_a_onestop.offset +
 				fmap->onestop_layout.vblock.offset,
 				fmap->onestop_layout.vblock.length,
 				internal.fwinfo[0].vblock)) {
@@ -98,7 +98,7 @@ uint32_t boot_rw_firmware(firmware_storage_t *file,
 		return VBNV_RECOVERY_RO_INVALID_RW;
 	}
 	if (firmware_storage_read(file,
-				fmap->readwrite_b.offset +
+				fmap->readwrite_b.rw_b_onestop.offset +
 				fmap->onestop_layout.vblock.offset,
 				fmap->onestop_layout.vblock.length,
 				internal.fwinfo[1].vblock)) {
@@ -108,9 +108,11 @@ uint32_t boot_rw_firmware(firmware_storage_t *file,
 
 	internal.file = file;
 	internal.fwinfo[0].offset =
-		fmap->readwrite_a.offset + fmap->onestop_layout.fwbody.offset;
+		fmap->readwrite_a.rw_a_onestop.offset +
+		fmap->onestop_layout.fwbody.offset;
 	internal.fwinfo[1].offset =
-		fmap->readwrite_b.offset + fmap->onestop_layout.fwbody.offset;
+		fmap->readwrite_b.rw_b_onestop.offset +
+		fmap->onestop_layout.fwbody.offset;
 	internal.fwinfo[0].size = get_fwbody_size((uint32_t)
 			internal.fwinfo[0].vblock);
 	internal.fwinfo[1].size = get_fwbody_size((uint32_t)

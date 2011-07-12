@@ -30,7 +30,7 @@ int is_ro_firmware(void);
 int is_tpm_trust_ro_firmware(void);
 
 uint32_t boot_rw_firmware(firmware_storage_t *file,
-		struct fdt_onestop_fmap *fmap, int dev_mode,
+		struct fdt_twostop_fmap *fmap, int dev_mode,
 		uint8_t *gbb_data, crossystem_data_t *cdata,
 		VbNvContext *nvcxt);
 

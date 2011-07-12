@@ -18,12 +18,13 @@
 #define PREFIX "firmware_storage_onestop: "
 
 enum {
-	SECTION_RO,
-	SECTION_RW
+	SECTION_RO = 0,
+	SECTION_RW_A,
+	SECTION_RW_B
 };
 
 struct context {
-	struct fdt_onestop_fmap *fmap;
+	struct fdt_twostop_fmap *fmap;
 	int section;
 	firmware_storage_t spi_file;
 	struct mmc *mmc;
@@ -31,21 +32,32 @@ struct context {
 	off_t offset_in_block;
 };
 
+static int within_entry(const struct fdt_fmap_entry *e, uint32_t offset)
+{
+	return e->offset <= offset && offset < e->offset + e->length;
+}
+
 static int get_section(struct context *cxt, off_t offset)
 {
-	const struct fdt_onestop_fmap *fmap = cxt->fmap;;
-	const off_t min_offset =
-		MIN(fmap->readwrite_a.offset, fmap->readwrite_b.offset);
-	return (offset < min_offset) ? SECTION_RO : SECTION_RW;
+	const struct fdt_twostop_fmap *fmap = cxt->fmap;;
+
+	if (within_entry(&fmap->readonly.readonly, offset))
+		return SECTION_RO;
+	else if (within_entry(&fmap->readwrite_a.readwrite_a, offset))
+		return SECTION_RW_A;
+	else if (within_entry(&fmap->readwrite_b.readwrite_b, offset))
+		return SECTION_RW_B;
+	else
+		return -1;
 }
 
 static void set_block_lba(struct context *cxt, off_t offset)
 {
-	const struct fdt_onestop_fmap *fmap = cxt->fmap;;
-	const off_t min_offset =
-		MIN(fmap->readwrite_a.offset, fmap->readwrite_b.offset);
-	const off_t max_offset =
-		MAX(fmap->readwrite_a.offset, fmap->readwrite_b.offset);
+	const struct fdt_twostop_fmap *fmap = cxt->fmap;;
+	const off_t min_offset = MIN(fmap->readwrite_a.rw_a_onestop.offset,
+			fmap->readwrite_b.rw_b_onestop.offset);
+	const off_t max_offset = MAX(fmap->readwrite_a.rw_a_onestop.offset,
+			fmap->readwrite_b.rw_b_onestop.offset);
 
 	cxt->start_block = CHROMEOS_RW_FIRMWARE_START_LBA;
 	if (offset >= max_offset)
@@ -64,6 +76,7 @@ static void set_block_lba(struct context *cxt, off_t offset)
 static off_t seek_onestop(void *context, off_t offset, enum whence_t whence)
 {
 	struct context *cxt = context;
+	int section;
 
 	VBDEBUG(PREFIX "seek(offset=%08x, whence=%d)\n", (int)offset, whence);
 
@@ -73,7 +86,13 @@ static off_t seek_onestop(void *context, off_t offset, enum whence_t whence)
 		return -1;
 	}
 
-	cxt->section = get_section(cxt, offset);
+	section = get_section(cxt, offset);
+	if (section < 0) {
+		VBDEBUG(PREFIX "offset is not in any section\n");
+		return -1;
+	}
+
+	cxt->section = section;
 	if (cxt->section == SECTION_RO)
 		return cxt->spi_file.seek(cxt->spi_file.context, offset, whence);
 
@@ -201,7 +220,7 @@ static int lock_onestop(void *context)
 }
 
 int firmware_storage_open_onestop(firmware_storage_t *file,
-		struct fdt_onestop_fmap *fmap)
+		struct fdt_twostop_fmap *fmap)
 {
 	struct context *cxt;
 

@@ -49,7 +49,21 @@ static int fdt_decode_fmap_entry(const void *blob, int offset, const char *path,
 	return 0;
 }
 
-int fdt_decode_onestop_fmap(const void *blob, struct fdt_onestop_fmap *config)
+#define LIST_OF_ENTRIES \
+	ACT_ON_ENTRY("/onestop-layout", onestop_layout.onestop_layout); \
+	ACT_ON_ENTRY("/firmware-image", onestop_layout.fwbody); \
+	ACT_ON_ENTRY("/verification-block", onestop_layout.vblock); \
+	ACT_ON_ENTRY("/firmware-id", onestop_layout.fwid); \
+	ACT_ON_ENTRY("/readonly", readonly.readonly); \
+	ACT_ON_ENTRY("/readonly/ro_onestop", readonly.ro_onestop); \
+	ACT_ON_ENTRY("/fmap", readonly.fmap); \
+	ACT_ON_ENTRY("/gbb", readonly.gbb); \
+	ACT_ON_ENTRY("/readwrite-a", readwrite_a.readwrite_a); \
+	ACT_ON_ENTRY("/rw-a-onestop", readwrite_a.rw_a_onestop); \
+	ACT_ON_ENTRY("/readwrite-b", readwrite_b.readwrite_b); \
+	ACT_ON_ENTRY("/rw-b-onestop", readwrite_b.rw_b_onestop);
+
+int fdt_decode_twostop_fmap(const void *blob, struct fdt_twostop_fmap *config)
 {
 	int fmap_offset, offset;
 
@@ -58,42 +72,26 @@ int fdt_decode_onestop_fmap(const void *blob, struct fdt_onestop_fmap *config)
 	if (fmap_offset < 0)
 		return fmap_offset;
 
-#define GET_ENTRY(path, entry) \
+#define ACT_ON_ENTRY(path, entry) \
 	offset = fdt_decode_fmap_entry(blob, fmap_offset, path, \
 			&config->entry); \
 	if (offset < 0) \
 		return offset;
 
-	GET_ENTRY("/onestop-layout", onestop_layout.onestop_layout);
-	GET_ENTRY("/onestop-layout/firmware-image", onestop_layout.fwbody);
-	GET_ENTRY("/onestop-layout/verification-block", onestop_layout.vblock);
-	GET_ENTRY("/onestop-layout/firmware-id", onestop_layout.fwid);
-	GET_ENTRY("/readonly", readonly.readonly);
-	GET_ENTRY("/readonly/gbb", readonly.gbb);
-	GET_ENTRY("/readonly/fmap", readonly.fmap);
-	GET_ENTRY("/readwrite-a", readwrite_a);
-	GET_ENTRY("/readwrite-b", readwrite_b);
+	LIST_OF_ENTRIES
 
-#undef GET_ENTRY
+#undef ACT_ON_ENTRY
 
 	return 0;
 }
 
-void dump_fmap(struct fdt_onestop_fmap *config)
+void dump_fmap(struct fdt_twostop_fmap *config)
 {
-#define PRINT_ENTRY(entry, tag) \
-	VBDEBUG(PREFIX "%-20s %08x:%08x\n", tag, \
+#define ACT_ON_ENTRY(path, entry) \
+	VBDEBUG(PREFIX "%-20s %08x:%08x\n", path, \
 			config->entry.offset, config->entry.length)
 
-	PRINT_ENTRY(onestop_layout.onestop_layout, "onestop_layout");
-	PRINT_ENTRY(onestop_layout.fwbody, "fwbody");
-	PRINT_ENTRY(onestop_layout.vblock, "vblock");
-	PRINT_ENTRY(onestop_layout.fwid, "fwid");
-	PRINT_ENTRY(readonly.readonly, "readonly");
-	PRINT_ENTRY(readonly.fmap, "fmap");
-	PRINT_ENTRY(readonly.gbb, "gbb");
-	PRINT_ENTRY(readwrite_a, "readwrite_a");
-	PRINT_ENTRY(readwrite_b, "readwrite_b");
+	LIST_OF_ENTRIES
 
-#undef PRINT_ENTRY
+#undef ACT_ON_ENTRY
 }

@@ -18,7 +18,11 @@ struct fdt_fmap_entry {
 	uint32_t length;
 };
 
-struct fdt_onestop_fmap {
+/*
+ * Only sections that are used during booting are put here. More sections will
+ * be added if required.
+ */
+struct fdt_twostop_fmap {
 	struct {
 		struct fdt_fmap_entry onestop_layout;
 		struct fdt_fmap_entry fwbody;
@@ -28,18 +32,24 @@ struct fdt_onestop_fmap {
 
 	struct {
 		struct fdt_fmap_entry readonly;
+		struct fdt_fmap_entry ro_onestop;
 		struct fdt_fmap_entry fmap;
 		struct fdt_fmap_entry gbb;
 	} readonly;
 
-	struct fdt_fmap_entry readwrite_a;
-	struct fdt_fmap_entry readwrite_b;
+	struct {
+		struct fdt_fmap_entry readwrite_a;
+		struct fdt_fmap_entry rw_a_onestop;
+	} readwrite_a;
 
-	/* TODO more entries to come */
+	struct {
+		struct fdt_fmap_entry readwrite_b;
+		struct fdt_fmap_entry rw_b_onestop;
+	} readwrite_b;
 };
 
-int fdt_decode_onestop_fmap(const void *blob, struct fdt_onestop_fmap *config);
+int fdt_decode_twostop_fmap(const void *blob, struct fdt_twostop_fmap *config);
 
-void dump_fmap(struct fdt_onestop_fmap *config);
+void dump_fmap(struct fdt_twostop_fmap *config);
 
 #endif /* CHROMEOS_FDT_DECODE_H_ */

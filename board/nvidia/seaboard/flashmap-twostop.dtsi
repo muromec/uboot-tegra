@@ -8,107 +8,152 @@
  * This is the flash map (fmap) for a twostop firmware. It defines all the areas
  * that Chrome OS expects to find in its firmware device. The device is split
  * into a number of top-level sections, and within each are several areas.
+ *
+ * Available flags for each entry are: read-only, compresed.
+ * All sections will be marked static in the fmap.
  */
 
 / {
-	flash {
+	flash@0 {
 		#address-cells = <1>;
 		#size-cells = <1>;
-		compatible = "chromeos,flashmap";
-		reg = <0x00000000 0x00200000>;
+		compatible = "winbond,W25Q32BVSSIG", "cfi-flash",
+			     "chromeos,flashmap";
+		reg = <0x00000000 0x00400000>;
 
 		/*
-		 * We have 2 MB of space and reserve top 1 MB for read-only,
-		 * and bottom 1 MB for readwrite.
+		 * We have 4 MB of space and reserve 1 MB for read-only, and
+		 * 1 MB for readwrite.
 		 *
 		 * Section readwrite slot A and B are stored on internal MMC
-		 * (not flash actually). We use starting address greater than
-		 * 2 MB for these sections.
+		 * (not flash actually).
 		 */
 
-		/* ---- Onestop Blob Layout ---- */
-		onestop-layout {
-			#address-cells = <1>;
-			#size-cells = <1>;
-
+		/* ---- Onestop Blob Layout; not a real section ---- */
+		onestop-layout@0 {
 			/* size: 512 KB */
+			label = "onestop-layout";
 			reg = <0x00000000 0x00080000>;
-
-			/* u-boot image including fdt: first ~503 KB */
-			firmware-image {
-				reg = <0x00000000 0x0007df00>;
-			};
-
-			/* verification block: 8 KB */
-			verification-block {
-				reg = <0x0007df00 0x00002000>;
-			};
-
-			/* frimware ID: 256 Bytes */
-			firmware-id {
-				reg = <0x0007ff00 0x00000100>;
-			};
+		};
+		/* U-Boot image including fdt: first ~503 KB */
+		firmware-image@0 {
+			label = "firmware-image";
+			reg = <0x00000000 0x0007df00>;
+		};
+		/* verification block: 8 KB */
+		verification-block@7df00 {
+			label = "verification-block";
+			reg = <0x0007df00 0x00002000>;
+		};
+		/* frimware ID: 256 Bytes */
+		firmware-id@7ff00 {
+			label = "firmware-id";
+			reg = <0x0007ff00 0x00000100>;
 		};
 
 		/* ---- Section: Read-only ---- */
-		readonly {
-			#address-cells = <1>;
-			#size-cells = <1>;
+		readonly@0 {
+			label = "readonly";
 			reg = <0x00000000 0x00100000>;
-			onestop { /* onestop layout inside */
-				reg = <0x00000000 0x00080000>;
-			};
-			data {
-				reg = <0x00080000 0x00008000>;
-			};
-			fmap {
-				reg = <0x00088000 0x00000400>;
-			};
-			gbb {
-				reg = <0x00088400 0x00020000>;
-			};
-			vpd {
-				reg = <0x000a8400 0x00010000>;
-			};
+			read-only;
+		};
+		bct@0 { /* Tegra's board config table: 64 KB */
+			label = "bct";
+			reg = <0x00000000 0x00010000>;
+			read-only;
+			type = "blob signed";
+		};
+		/* R/O section's copy of onestop */
+		ro-onestop@10000 {
+			label = "ro-onestop";
+			reg = <0x00010000 0x00080000>;
+			read-only;
+			type = "blob boot";
+		};
+		gbb@90000 {
+			label = "gbb";
+			reg = <0x00090000 0x00020000>;
+			read-only;
+			type = "blob gbb";
+		};
+		ro-data@b0000 {
+			label = "ro-data";
+			reg = <0x000b0000 0x00010000>;
+			read-only;
+		};
+		ro-vpd@c0000 {
+			label = "ro-vpd";
+			reg = <0x000c0000 0x00010000>;
+			read-only;
+			type = "wiped";
+			wipe-value = [ff];
+		};
+		fmap@d0000 {
+			label = "ro-fmap";
+			reg = <0x000d0000 0x00000400>;
+			read-only;
+			type = "fmap";
+			ver-major = <1>;
+			ver-minor = <0>;
 		};
 
 		/* ---- Section: Readwrite ---- */
-		readwrite {
-			#address-cells = <1>;
-			#size-cells = <1>;
+		readwrite@100000 {
+			label = "readwrite";
 			reg = <0x00100000 0x00100000>;
-			vpd {
-				reg = <0x00100000 0x00080000>;
-			};
-			dev-cfg {
-				reg = <0x00180000 0x00040000>;
-			};
-			shared-data {
-				reg = <0x001c0000 0x00030000>;
-			};
-			env {
-				reg = <0x001f0000 0x00010000>;
-			};
+		};
+		rw-vpd@100000 {
+			label = "rw-vpd";
+			reg = <0x00100000 0x00080000>;
+			type = "wiped";
+			wipe-value = [ff];
+		};
+		shared-dev-cfg@180000 {
+			label = "shared-dev-cfg";
+			reg = <0x00180000 0x00040000>;
+			type = "wiped";
+			wipe-value = [00];
+		};
+		shared-data@1c0000 {
+			label = "shared-data";
+			reg = <0x001c0000 0x00030000>;
+			type = "wiped";
+			wipe-value = [00];
+		};
+		shared-env@1ff000 {
+			label = "shared-env";
+			reg = <0x001ff000 0x00001000>;
+
+			/*
+			 * We could put the dev environment here, but U-Boot
+			 * has a default built in. Devs can 'saveenv' to set
+			 * this up.
+			 */
+			type = "wiped";
+			wipe-value = [00];
 		};
 
-		/* ---- Section: Readwrite slot A ---- */
-		readwrite-a {
-			#address-cells = <1>;
-			#size-cells = <1>;
+		/* TODO: store disk LBA of slot A and B here */
+
+		/* ---- Section: Readwrite Slot A and B ---- */
+		/* So far only onestop is put into readwrite A/B section */
+		readwrite_a@200000 {
+			label = "readwrite_a";
 			reg = <0x00200000 0x00080000>;
-			onestop { /* onestop layout inside */
-				reg = <0x00000000 0x00080000>;
-			};
 		};
-
-		/* ---- Section: Readwrite slot B ---- */
-		readwrite-b {
-			#address-cells = <1>;
-			#size-cells = <1>;
-			reg = <0x00280000 0x00080000>;
-			onestop { /* onestop layout inside */
-				reg = <0x00000000 0x00080000>;
-			};
+		rw-a-onestop@200000 {
+			label = "rw-a-onestop";
+			reg = <0x00200000 0x00080000>;
+			type = "blob boot";
+		};
+		readwrite_b@300000 {
+			label = "readwrite_b";
+			reg = <0x00300000 0x00080000>;
+		};
+		rw-b-onestop@300000 {
+			label = "rw-b-onestop";
+			reg = <0x00300000 0x00080000>;
+			type = "blob boot";
 		};
 	};
 };
