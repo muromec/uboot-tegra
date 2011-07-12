@@ -222,7 +222,7 @@ static uint32_t init_internal_state(firmware_storage_t *file,
 	}
 
 	/* open firmware storage device and load gbb */
-	if (firmware_storage_open_onestop(file, fmap)) {
+	if (firmware_storage_open_twostop(file, fmap)) {
 		VBDEBUG(PREFIX "open firmware storage fail\n");
 		return VBNV_RECOVERY_RO_SHARED_DATA;
 	}

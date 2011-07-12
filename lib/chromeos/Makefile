@@ -23,9 +23,11 @@ COBJS-$(CONFIG_CHROMEOS) += vboot_nvstorage_helper.o
 COBJS-$(CONFIG_CHROMEOS) += gbb_bmpblk.o
 COBJS-$(CONFIG_CHROMEOS) += utility.o
 
-COBJS-$(CONFIG_CHROMEOS_ONESTOP) += firmware_storage_onestop.o
+COBJS-$(CONFIG_CHROMEOS_ONESTOP) += firmware_storage_twostop.o
 COBJS-$(CONFIG_CHROMEOS_ONESTOP) += load_kernel_helper.o
 COBJS-$(CONFIG_CHROMEOS_ONESTOP) += onestop.o
+
+COBJS-$(CONFIG_CHROMEOS_TWOSTOP) += firmware_storage_twostop.o
 
 COBJS	:= $(COBJS-y)
 OBJS	:= $(addprefix $(obj),$(COBJS))

@@ -15,7 +15,7 @@
 #include <chromeos/firmware_storage.h>
 #include <chromeos/os_storage.h>
 
-#define PREFIX "firmware_storage_onestop: "
+#define PREFIX "firmware_storage_twostop: "
 
 enum {
 	SECTION_RO = 0,
@@ -70,7 +70,7 @@ static int write_mmc(struct mmc *mmc,
 		uint32_t start_block, uint32_t offset_in_block,
 		uint32_t offset, uint32_t count, void *buf);
 
-static int read_onestop(struct firmware_storage_t *file,
+static int read_twostop(struct firmware_storage_t *file,
 		uint32_t offset, uint32_t count, void *buf)
 {
 	struct context *cxt = file->context;
@@ -92,7 +92,7 @@ static int read_onestop(struct firmware_storage_t *file,
 	}
 }
 
-static int write_onestop(struct firmware_storage_t *file,
+static int write_twostop(struct firmware_storage_t *file,
 		uint32_t offset, uint32_t count, void *buf)
 {
 	struct context *cxt = file->context;
@@ -208,7 +208,7 @@ static int write_mmc(struct mmc *mmc,
 	return 0;
 }
 
-static int close_onestop(firmware_storage_t *file)
+static int close_twostop(firmware_storage_t *file)
 {
 	struct context *cxt = file->context;
 	int ret;
@@ -219,7 +219,7 @@ static int close_onestop(firmware_storage_t *file)
 	return ret;
 }
 
-int firmware_storage_open_onestop(firmware_storage_t *file,
+int firmware_storage_open_twostop(firmware_storage_t *file,
 		struct fdt_twostop_fmap *fmap)
 {
 	struct context *cxt;
@@ -243,9 +243,9 @@ int firmware_storage_open_onestop(firmware_storage_t *file,
 	}
 	mmc_init(cxt->mmc);
 
-	file->read = read_onestop;
-	file->write = write_onestop;
-	file->close = close_onestop;
+	file->read = read_twostop;
+	file->write = write_twostop;
+	file->close = close_twostop;
 	file->context = (void *)cxt;
 
 	return 0;
