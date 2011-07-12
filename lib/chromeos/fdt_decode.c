@@ -55,7 +55,7 @@ static int fdt_decode_fmap_entry(const void *blob, int offset, const char *path,
 	ACT_ON_ENTRY("/verification-block", onestop_layout.vblock); \
 	ACT_ON_ENTRY("/firmware-id", onestop_layout.fwid); \
 	ACT_ON_ENTRY("/readonly", readonly.readonly); \
-	ACT_ON_ENTRY("/readonly/ro_onestop", readonly.ro_onestop); \
+	ACT_ON_ENTRY("/ro-onestop", readonly.ro_onestop); \
 	ACT_ON_ENTRY("/fmap", readonly.fmap); \
 	ACT_ON_ENTRY("/gbb", readonly.gbb); \
 	ACT_ON_ENTRY("/readwrite-a", readwrite_a.readwrite_a); \
@@ -69,14 +69,18 @@ int fdt_decode_twostop_fmap(const void *blob, struct fdt_twostop_fmap *config)
 
 	fmap_offset = fdt_node_offset_by_compatible(blob, -1,
 			"chromeos,flashmap");
-	if (fmap_offset < 0)
+	if (fmap_offset < 0) {
+		VBDEBUG(PREFIX "no compatible node exists\n");
 		return fmap_offset;
+	}
 
 #define ACT_ON_ENTRY(path, entry) \
 	offset = fdt_decode_fmap_entry(blob, fmap_offset, path, \
 			&config->entry); \
-	if (offset < 0) \
-		return offset;
+	if (offset < 0) { \
+		VBDEBUG(PREFIX "load %s fail\n", path); \
+		return offset; \
+	}
 
 	LIST_OF_ENTRIES
 

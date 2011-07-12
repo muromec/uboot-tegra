@@ -137,8 +137,8 @@
 
 		/* ---- Section: Readwrite Slot A and B ---- */
 		/* So far only onestop is put into readwrite A/B section */
-		readwrite_a@200000 {
-			label = "readwrite_a";
+		readwrite-a@200000 {
+			label = "readwrite-a";
 			reg = <0x00200000 0x00080000>;
 		};
 		rw-a-onestop@200000 {
@@ -146,8 +146,8 @@
 			reg = <0x00200000 0x00080000>;
 			type = "blob boot";
 		};
-		readwrite_b@300000 {
-			label = "readwrite_b";
+		readwrite-b@300000 {
+			label = "readwrite-b";
 			reg = <0x00300000 0x00080000>;
 		};
 		rw-b-onestop@300000 {
