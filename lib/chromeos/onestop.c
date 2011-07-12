@@ -33,7 +33,7 @@ typedef struct {
 int is_tpm_trust_ro_firmware(void)
 {
 	/* TODO implement later */
-	return 0;
+	return 1;
 }
 
 int GetFirmwareBody(LoadFirmwareParams *params, uint64_t index)
