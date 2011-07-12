@@ -370,7 +370,7 @@ static uint8_t *read_gbb_from_firmware(void)
 		return NULL;
 	}
 
-	if (firmware_storage_close(&file)) {
+	if (file.close(&file)) {
 		VbExDebug("Failed to close firmware device!\n");
 	}
 

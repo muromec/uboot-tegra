@@ -14,29 +14,25 @@
 #define CHROMEOS_FIRMWARE_STORAGE_H_
 
 #include <chromeos/fdt_decode.h>
-#include <linux/types.h>
 
-enum whence_t { SEEK_SET, SEEK_CUR, SEEK_END };
-
-/*
- * The semantic (argument and return value) is similar with system
- * call lseek(2), read(2) and write(2), except that file descriptor
- * is replaced by [context].
+/**
+ * These read or write [count] bytes starting from [offset] of storage into or
+ * from the [buf].
+ *
+ * @param file is the device you access
+ * @param offset is where on the device you access
+ * @param count is the amount of data in byte you access
+ * @param buf is the data that these functions read from or write to
+ * @return 0 if it succeeds, non-zero if it fails
  */
-typedef struct {
-	off_t (*seek)(void *context, off_t offset, enum whence_t whence);
-	ssize_t (*read)(void *context, void *buf, size_t count);
-	ssize_t (*write)(void *context, const void *buf, size_t count);
-	int (*close)(void *context);
+typedef struct firmware_storage_t {
+	int (*read)(struct firmware_storage_t *file,
+			uint32_t offset, uint32_t count, void *buf);
+	int (*write)(struct firmware_storage_t *file,
+			uint32_t offset, uint32_t count, void *buf);
+	int (*close)(struct firmware_storage_t *file);
 
-	/**
-	 * This locks the storage device, i.e., enables write protect.
-	 *
-	 * @return 0 if it succeeds, non-zero if it fails
-	 */
-	int (*lock_device)(void *context);
-
-	void *context;
+	void *context; /* device driver's private data */
 } firmware_storage_t;
 
 /**
@@ -49,28 +45,5 @@ int firmware_storage_open_spi(firmware_storage_t *file);
 
 int firmware_storage_open_onestop(firmware_storage_t *file,
 		struct fdt_twostop_fmap *fmap);
-
-/**
- * These read or write [count] bytes starting from [offset] of storage into or
- * from the [buf]. These are really wrappers of file->{seek,read,write}.
- *
- * @param file - storage device you access
- * @param offset - where on the device you access
- * @param count - the amount of data in byte you access
- * @param buf - the data that these functions read from or write to
- * @return 0 if it succeeds, non-zero if it fails
- */
-int firmware_storage_read(firmware_storage_t *file,
-		const off_t offset, const size_t count, void *buf);
-int firmware_storage_write(firmware_storage_t *file,
-		const off_t offset, const size_t count, const void *buf);
-
-/**
- * This close SPI flash device
- *
- * @param file - the closed SPI flash device
- * @return 0 if it succeeds, non-zero if it fails
- */
-int firmware_storage_close(firmware_storage_t *file);
 
 #endif /* CHROMEOS_FIRMWARE_STORAGE_H_ */

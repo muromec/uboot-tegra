@@ -41,20 +41,17 @@ static int do_vboot_test_fwrw(cmd_tbl_t *cmdtp,
 		return 1;
 	}
 
-	if (firmware_storage_read(&file, TEST_FW_START, TEST_FW_LENGTH,
-			original_buf)) {
+	if (file.read(&file, TEST_FW_START, TEST_FW_LENGTH, original_buf)) {
 		VbExDebug("Failed to read firmware!\n");
 		return 1;
 	}
 
-	if (firmware_storage_write(&file, TEST_FW_START, TEST_FW_LENGTH,
-			target_buf)) {
+	if (file.write(&file, TEST_FW_START, TEST_FW_LENGTH, target_buf)) {
 		VbExDebug("Failed to write firmware!\n");
 		ret = 1;
 	} else {
 		/* Read back and verify the data. */
-		firmware_storage_read(&file, TEST_FW_START, TEST_FW_LENGTH,
-				verify_buf);
+		file.read(&file, TEST_FW_START, TEST_FW_LENGTH, verify_buf);
 		if (memcmp(target_buf, verify_buf, TEST_FW_LENGTH) != 0) {
 			VbExDebug("Verify failed. The target data wrote "
 				  "wrong.\n");
@@ -63,10 +60,9 @@ static int do_vboot_test_fwrw(cmd_tbl_t *cmdtp,
 	}
 
 	 /* Write the original data back. */
-	firmware_storage_write(&file, TEST_FW_START, TEST_FW_LENGTH,
-			original_buf);
+	file.write(&file, TEST_FW_START, TEST_FW_LENGTH, original_buf);
 
-	firmware_storage_close(&file);
+	file.close(&file);
 
 	if (ret == 0)
 		VbExDebug("Read and write firmware test SUCCESS.\n");

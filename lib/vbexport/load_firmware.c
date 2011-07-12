@@ -17,9 +17,6 @@
 
 #define PREFIX			"load_firmware: "
 
-/* Amount of bytes we read each time we call read() */
-#define BLOCK_SIZE		512
-
 VbError_t VbExHashFirmwareBody(VbCommonParams* cparams,
 			       uint32_t firmware_index)
 {
@@ -27,8 +24,6 @@ VbError_t VbExHashFirmwareBody(VbCommonParams* cparams,
 	firmware_storage_t *file = cache->file;
 	firmware_info_t *info;
 	int index;
-	uint8_t *buffer;
-	size_t leftover, n, got_n;
 
 	if (firmware_index != VB_SELECT_FIRMWARE_A &&
 			firmware_index != VB_SELECT_FIRMWARE_B) {
@@ -39,33 +34,13 @@ VbError_t VbExHashFirmwareBody(VbCommonParams* cparams,
 
 	index = (firmware_index == VB_SELECT_FIRMWARE_A ? 0 : 1);
 	info = &cache->infos[index];
-	buffer = info->buffer;
 
-	if (file->seek(file->context, info->offset, SEEK_SET)
-			< 0) {
-		VbExDebug(PREFIX "seek to firmware data failed\n");
+	if (file->read(file, info->offset, info->size, info->buffer)) {
+		VbExDebug(PREFIX "fail to read firmware body: %d\n", index);
 		return 1;
 	}
 
-	/*
-	 * This loop feeds firmware body into VbUpdateFirmwareBodyHash.
-	 * Variable leftover keeps the remaining number of bytes.
-	 */
-	for (leftover = info->size; leftover > 0; leftover -= n, buffer += n) {
-		n = min(BLOCK_SIZE, leftover);
-		got_n = file->read(file->context, buffer, n);
-		if (got_n != n) {
-			VbExDebug(PREFIX "an error has occured "
-					"while reading firmware: %d\n", n);
-			return 1;
-		}
-
-		/*
-		 * See vboot_reference/firmware/include/vboot_api.h for
-		 * documentation of this function.
-		 */
-		VbUpdateFirmwareBodyHash(cparams, buffer, n);
-	}
+	VbUpdateFirmwareBodyHash(cparams, info->buffer, info->size);
 
 	return 0;
 }

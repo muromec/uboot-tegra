@@ -160,7 +160,7 @@ static uint32_t init_internal_state_bottom_half(firmware_storage_t *file,
 		*dev_mode = 1;
 	}
 
-	if (firmware_storage_read(file,
+	if (file->read(file,
 				fmap->onestop_layout.fwid.offset,
 				fmap->onestop_layout.fwid.length,
 				frid)) {
@@ -225,7 +225,7 @@ static uint32_t init_internal_state(firmware_storage_t *file,
 		VBDEBUG(PREFIX "open firmware storage fail\n");
 		return VBNV_RECOVERY_RO_SHARED_DATA;
 	}
-	if (firmware_storage_read(file,
+	if (file->read(file,
 				fmap->readonly.gbb.offset,
 				fmap->readonly.gbb.length,
 				_state.gbb_data)) {
@@ -289,7 +289,7 @@ static uint32_t load_kernel_subkey_a(firmware_storage_t *file,
 	struct RSAPublicKey *data_key;
 
 	VBDEBUG(PREFIX "reading kernel subkey A\n");
-	if (firmware_storage_read(file,
+	if (file->read(file,
 				fmap->onestop_layout.vblock.offset,
 				fmap->onestop_layout.vblock.length,
 				key_block)) {
@@ -499,7 +499,7 @@ static uint32_t rewritable_boot_init(firmware_storage_t *file,
 	crossystem_data_t *first_stage_cdata;
 	int w;
 
-	if (firmware_storage_read(file,
+	if (file->read(file,
 				fmap->onestop_layout.fwid.offset,
 				fmap->onestop_layout.fwid.length,
 				fwid)) {

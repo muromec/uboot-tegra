@@ -47,8 +47,8 @@ int GetFirmwareBody(LoadFirmwareParams *params, uint64_t index)
 		return 1;
 	}
 
-	if (firmware_storage_read(s->file, s->fwinfo[i].offset,
-				s->fwinfo[i].size, s->fwinfo[i].fwbody)) {
+	if (s->file->read(s->file, s->fwinfo[i].offset, s->fwinfo[i].size,
+				s->fwinfo[i].fwbody)) {
 		VBDEBUG(PREFIX "fail to read firmware body: %d\n", i);
 		return 1;
 	}
@@ -89,7 +89,7 @@ uint32_t boot_rw_firmware(firmware_storage_t *file,
 	internal.fwinfo[1].fwbody = memalign(CACHE_LINE_SIZE,
 			fmap->onestop_layout.fwbody.length);
 
-	if (firmware_storage_read(file,
+	if (file->read(file,
 				fmap->readwrite_a.rw_a_onestop.offset +
 				fmap->onestop_layout.vblock.offset,
 				fmap->onestop_layout.vblock.length,
@@ -97,7 +97,7 @@ uint32_t boot_rw_firmware(firmware_storage_t *file,
 		VBDEBUG(PREFIX "fail to read vblock A\n");
 		return VBNV_RECOVERY_RO_INVALID_RW;
 	}
-	if (firmware_storage_read(file,
+	if (file->read(file,
 				fmap->readwrite_b.rw_b_onestop.offset +
 				fmap->onestop_layout.vblock.offset,
 				fmap->onestop_layout.vblock.length,

@@ -41,7 +41,7 @@ int init_vboot_global(vb_global_t *global, firmware_storage_t *file)
 
 	/* Load GBB from SPI */
 	global->gbb_size = CONFIG_LENGTH_GBB;
-	if (firmware_storage_read(file, CONFIG_OFFSET_GBB,
+	if (file->read(file, CONFIG_OFFSET_GBB,
 			CONFIG_LENGTH_GBB, global->gbb_data)) {
 		VbExDebug(PREFIX "Failed to read GBB!\n");
 		return 1;
@@ -62,7 +62,7 @@ int init_vboot_global(vb_global_t *global, firmware_storage_t *file)
 	developer_sw = is_developer_mode_gpio_asserted(
 			polarity_developer_sw);
 
-	if (firmware_storage_read(file, CONFIG_OFFSET_RO_FRID,
+	if (file->read(file, CONFIG_OFFSET_RO_FRID,
 			CONFIG_LENGTH_RO_FRID, frid)) {
 		VbExDebug(PREFIX "Failed to read frid!\n");
 		return 1;

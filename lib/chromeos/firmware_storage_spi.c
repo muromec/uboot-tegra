@@ -25,76 +25,42 @@
 # define CONFIG_SF_DEFAULT_MODE		SPI_MODE_3
 #endif
 
-struct context_t {
-	struct spi_flash *flash;
-	u32 offset;
-};
-
-static off_t seek_spi(void *context, off_t offset, enum whence_t whence)
-{
-	struct context_t *cxt = context;
-	u32 next_offset;
-
-	if (whence == SEEK_SET)
-		next_offset = offset;
-	else if (whence == SEEK_CUR)
-		next_offset = cxt->offset + offset;
-	else if (whence == SEEK_END)
-		next_offset = cxt->flash->size + offset;
-	else {
-		VBDEBUG(PREFIX "unknown whence value: %d\n", whence);
-		return -1;
-	}
-
-	if (next_offset < 0) {
-		VBDEBUG(PREFIX "negative offset: %d\n", next_offset);
-		return -1;
-	}
-
-	if (next_offset > cxt->flash->size) {
-		VBDEBUG(PREFIX "offset overflow: 0x%08x > 0x%08x\n",
-				next_offset, cxt->flash->size);
-		return -1;
-	}
-
-	cxt->offset = next_offset;
-	return cxt->offset;
-}
-
 /*
  * Check the right-exclusive range [offset:offset+*count_ptr), and adjust
  * value pointed by <count_ptr> to form a valid range when needed.
  *
  * Return 0 if it is possible to form a valid range. and non-zero if not.
  */
-static int border_check(struct spi_flash *flash, u32 offset,
-		size_t *count_ptr)
+static int border_check(struct spi_flash *flash, uint32_t offset,
+		uint32_t count)
 {
 	if (offset >= flash->size) {
 		VBDEBUG(PREFIX "at EOF\n");
 		return -1;
 	}
 
-	if (offset + *count_ptr > flash->size)
-		*count_ptr = flash->size - offset;
+	if (offset + count > flash->size) {
+		VBDEBUG(PREFIX "exceed range\n");
+		return -1;
+	}
 
 	return 0;
 }
 
-static ssize_t read_spi(void *context, void *buf, size_t count)
+static int read_spi(firmware_storage_t *file, uint32_t offset, uint32_t count,
+		void *buf)
 {
-	struct context_t *cxt = context;
+	struct spi_flash *flash = file->context;
 
-	if (border_check(cxt->flash, cxt->offset, &count))
+	if (border_check(flash, offset, count))
 		return -1;
 
-	if (cxt->flash->read(cxt->flash, cxt->offset, count, buf)) {
+	if (flash->read(flash, offset, count, buf)) {
 		VBDEBUG(PREFIX "SPI read fail\n");
 		return -1;
 	}
 
-	cxt->offset += count;
-	return count;
+	return 0;
 }
 
 /*
@@ -111,7 +77,7 @@ static ssize_t read_spi(void *context, void *buf, size_t count)
  * After alignment adjustment, both offset and length will be multiple of
  * SECTOR_SIZE, and will be larger than or equal to the original range.
  */
-static void align_to_sector(size_t *offset_ptr, size_t *length_ptr)
+static void align_to_sector(uint32_t *offset_ptr, uint32_t *length_ptr)
 {
 	VBDEBUG(PREFIX "before adjustment\n");
 	VBDEBUG(PREFIX "offset: 0x%x\n", *offset_ptr);
@@ -133,55 +99,51 @@ static void align_to_sector(size_t *offset_ptr, size_t *length_ptr)
 	VBDEBUG(PREFIX "length: 0x%x\n", *length_ptr);
 }
 
-static ssize_t write_spi(void *context, const void *buf, size_t count)
+static int write_spi(firmware_storage_t *file, uint32_t offset, uint32_t count,
+		void *buf)
 {
-	struct context_t *cxt = context;
-	struct spi_flash *flash = cxt->flash;
+	struct spi_flash *flash = file->context;
 	uint8_t static_buf[SECTOR_SIZE];
 	uint8_t *backup_buf;
-	ssize_t ret = -1;
-	size_t offset, length, tmp;
-	int status;
+	uint32_t k, n;
+	int status, ret = -1;
 
-	/* We will erase <length> bytes starting from <offset> */
-	offset = cxt->offset;
-	length = count;
-	align_to_sector(&offset, &length);
+	/* We will erase <n> bytes starting from <k> */
+	k = offset;
+	n = count;
+	align_to_sector(&k, &n);
 
-	tmp = length;
-	if (border_check(flash, offset, &tmp))
-		return -1;
-	if (tmp != length) {
-		VBDEBUG(PREFIX "cannot erase range [%08x:%08x]: %08x\n",
-				offset, offset + length, offset + tmp);
+	VBDEBUG(PREFIX "offset:          0x%08x\n", offset);
+	VBDEBUG(PREFIX "adjusted offset: 0x%08x\n", k);
+	if (k > offset) {
+		VBDEBUG(PREFIX "align incorrect: %08x > %08x\n", k, offset);
 		return -1;
 	}
 
-	backup_buf = length > sizeof(static_buf) ? malloc(length) : static_buf;
+	if (border_check(flash, k, n))
+		return -1;
 
-	if ((status = flash->read(flash, offset, length, backup_buf))) {
+	backup_buf = n > sizeof(static_buf) ? malloc(n) : static_buf;
+
+	if ((status = flash->read(flash, k, n, backup_buf))) {
 		VBDEBUG(PREFIX "cannot backup data: %d\n", status);
 		goto EXIT;
 	}
 
-	if ((status = flash->erase(flash, offset, length))) {
+	if ((status = flash->erase(flash, k, n))) {
 		VBDEBUG(PREFIX "SPI erase fail: %d\n", status);
 		goto EXIT;
 	}
 
-	VBDEBUG(PREFIX "cxt->offset: 0x%08x\n", cxt->offset);
-	VBDEBUG(PREFIX "offset:      0x%08x\n", offset);
-
 	/* combine data we want to write and backup data */
-	memcpy(backup_buf + (cxt->offset - offset), buf, count);
+	memcpy(backup_buf + (offset - k), buf, count);
 
-	if (flash->write(flash, offset, length, backup_buf)) {
+	if (flash->write(flash, k, n, backup_buf)) {
 		VBDEBUG(PREFIX "SPI write fail\n");
 		goto EXIT;
 	}
 
-	cxt->offset += count;
-	ret = count;
+	ret = 0;
 
 EXIT:
 	if (backup_buf != static_buf)
@@ -190,19 +152,10 @@ EXIT:
 	return ret;
 }
 
-static int close_spi(void *context)
+static int close_spi(firmware_storage_t *file)
 {
-	struct context_t *cxt = context;
-
-	spi_flash_free(cxt->flash);
-	free(cxt);
-
-	return 0;
-}
-
-static int lock_spi(void *context)
-{
-	/* TODO Implement lock device */
+	struct spi_flash *flash = file->context;
+	spi_flash_free(flash);
 	return 0;
 }
 
@@ -212,23 +165,17 @@ int firmware_storage_open_spi(firmware_storage_t *file)
 	const unsigned int cs = 0;
 	const unsigned int max_hz = CONFIG_SF_DEFAULT_SPEED;
 	const unsigned int spi_mode = CONFIG_SF_DEFAULT_MODE;
-	struct context_t *cxt;
+	struct spi_flash *flash;
 
-	cxt = malloc(sizeof(*cxt));
-	cxt->offset = 0;
-	cxt->flash = spi_flash_probe(bus, cs, max_hz, spi_mode);
-	if (!cxt->flash) {
+	if (!(flash = spi_flash_probe(bus, cs, max_hz, spi_mode))) {
 		VBDEBUG(PREFIX "fail to init SPI flash at %u:%u\n", bus, cs);
-		free(cxt);
 		return -1;
 	}
 
-	file->seek = seek_spi;
 	file->read = read_spi;
 	file->write = write_spi;
 	file->close = close_spi;
-	file->lock_device = lock_spi;
-	file->context = (void*) cxt;
+	file->context = (void *)flash;
 
 	return 0;
 }

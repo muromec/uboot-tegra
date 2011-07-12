@@ -28,8 +28,6 @@ struct context {
 	int section;
 	firmware_storage_t spi_file;
 	struct mmc *mmc;
-	lbaint_t start_block;
-	off_t offset_in_block;
 };
 
 static int within_entry(const struct fdt_fmap_entry *e, uint32_t offset)
@@ -37,10 +35,8 @@ static int within_entry(const struct fdt_fmap_entry *e, uint32_t offset)
 	return e->offset <= offset && offset < e->offset + e->length;
 }
 
-static int get_section(struct context *cxt, off_t offset)
+static int get_section(const struct fdt_twostop_fmap *fmap, off_t offset)
 {
-	const struct fdt_twostop_fmap *fmap = cxt->fmap;;
-
 	if (within_entry(&fmap->readonly.readonly, offset))
 		return SECTION_RO;
 	else if (within_entry(&fmap->readwrite_a.readwrite_a, offset))
@@ -51,172 +47,172 @@ static int get_section(struct context *cxt, off_t offset)
 		return -1;
 }
 
-static void set_block_lba(struct context *cxt, off_t offset)
+static void set_start_block_and_offset(const struct fdt_twostop_fmap *fmap,
+		int section, uint32_t offset,
+		uint32_t *start_block_ptr, uint32_t *offset_in_block_ptr)
 {
-	const struct fdt_twostop_fmap *fmap = cxt->fmap;;
-	const off_t min_offset = MIN(fmap->readwrite_a.rw_a_onestop.offset,
-			fmap->readwrite_b.rw_b_onestop.offset);
-	const off_t max_offset = MAX(fmap->readwrite_a.rw_a_onestop.offset,
-			fmap->readwrite_b.rw_b_onestop.offset);
-
-	cxt->start_block = CHROMEOS_RW_FIRMWARE_START_LBA;
-	if (offset >= max_offset)
-		cxt->start_block +=
+	/* TODO load starting LBA from fdt */
+	*start_block_ptr = CHROMEOS_RW_FIRMWARE_START_LBA;
+	if (section == SECTION_RW_B)
+		*start_block_ptr +=
 			(fmap->onestop_layout.onestop_layout.length >> 9);
 
-	if (offset >= max_offset)
-		cxt->offset_in_block = offset - max_offset;
-	else
-		cxt->offset_in_block = offset - min_offset;
+	*offset_in_block_ptr = offset - ((section == SECTION_RW_A) ?
+			fmap->readwrite_a.readwrite_a.offset :
+			fmap->readwrite_b.readwrite_b.offset);
 
-	cxt->start_block += (cxt->offset_in_block >> 9);
-	cxt->offset_in_block &= 0x1ff;
+	*start_block_ptr += (*offset_in_block_ptr >> 9);
+	*offset_in_block_ptr &= 0x1ff;
 }
 
-static off_t seek_onestop(void *context, off_t offset, enum whence_t whence)
+static int read_mmc(struct mmc *mmc,
+		uint32_t start_block, uint32_t offset_in_block,
+		uint32_t offset, uint32_t count, void *buf);
+static int write_mmc(struct mmc *mmc,
+		uint32_t start_block, uint32_t offset_in_block,
+		uint32_t offset, uint32_t count, void *buf);
+
+static int read_onestop(struct firmware_storage_t *file,
+		uint32_t offset, uint32_t count, void *buf)
 {
-	struct context *cxt = context;
-	int section;
+	struct context *cxt = file->context;
+	int section = get_section(cxt->fmap, offset);
+	uint32_t start_block = 0, offset_in_block = 0;
 
-	VBDEBUG(PREFIX "seek(offset=%08x, whence=%d)\n", (int)offset, whence);
+	VBDEBUG(PREFIX "read(offset=%08x, count=%08x, buffer=%p)\n",
+			offset, count, buf);
 
-	/* TODO support other SEEK_* operation */
-	if (whence != SEEK_SET) {
-		VBDEBUG(PREFIX "only support SEEK_SET for now\n");
+	if (section < 0)
 		return -1;
+	else if (section == SECTION_RO)
+		return cxt->spi_file.read(&cxt->spi_file, offset, count, buf);
+	else {
+		set_start_block_and_offset(cxt->fmap, section, offset,
+				&start_block, &offset_in_block);
+		return read_mmc(cxt->mmc, start_block, offset_in_block,
+				offset, count, buf);
 	}
-
-	section = get_section(cxt, offset);
-	if (section < 0) {
-		VBDEBUG(PREFIX "offset is not in any section\n");
-		return -1;
-	}
-
-	cxt->section = section;
-	if (cxt->section == SECTION_RO)
-		return cxt->spi_file.seek(cxt->spi_file.context, offset, whence);
-
-	set_block_lba(cxt, offset);
-
-	VBDEBUG(PREFIX "seek: section = %d, block = %08llx, offset = %08x\n",
-			cxt->section,
-			(uint64_t)cxt->start_block,
-			(int)cxt->offset_in_block);
-
-	return cxt->offset_in_block;
 }
 
-static ssize_t read_onestop(void *context, void *buf, size_t count)
+static int write_onestop(struct firmware_storage_t *file,
+		uint32_t offset, uint32_t count, void *buf)
 {
-	struct context *cxt = context;
+	struct context *cxt = file->context;
+	int section = get_section(cxt->fmap, offset);
+	uint32_t start_block = 0, offset_in_block = 0;
+
+	VBDEBUG(PREFIX "write(offset=%08x, count=%08x, buffer=%p)\n",
+			offset, count, buf);
+
+	if (section < 0)
+		return -1;
+	else if (section == SECTION_RO)
+		return cxt->spi_file.write(&cxt->spi_file, offset, count, buf);
+	else {
+		set_start_block_and_offset(cxt->fmap, section, offset,
+				&start_block, &offset_in_block);
+		return write_mmc(cxt->mmc, start_block, offset_in_block,
+				offset, count, buf);
+	}
+}
+
+static int read_mmc(struct mmc *mmc,
+		uint32_t start_block, uint32_t offset_in_block,
+		uint32_t offset, uint32_t count, void *buf)
+{
 	uint32_t n_block;
-	size_t n_byte_read;
+	size_t n_byte;
 	uint8_t *residual;
 
-	VBDEBUG(PREFIX "read(count=%08x, buffer=%p)\n", (int)count, buf);
-
-	if (cxt->section == SECTION_RO)
-		return cxt->spi_file.read(cxt->spi_file.context, buf, count);
-
 	residual = memalign(CACHE_LINE_SIZE, 512);
-	n_byte_read = 0;
+	n_byte = 0;
 
-	if (cxt->offset_in_block) {
-		n_byte_read = MIN(512 - cxt->offset_in_block, count);
-		cxt->mmc->block_dev.block_read(MMC_INTERNAL_DEVICE,
-				cxt->start_block, 1, residual);
-		memcpy(buf, residual + cxt->offset_in_block, n_byte_read);
+	if (offset_in_block) {
+		n_byte = MIN(512 - offset_in_block, count);
+		mmc->block_dev.block_read(MMC_INTERNAL_DEVICE,
+				start_block, 1, residual);
+		memcpy(buf, residual + offset_in_block, n_byte);
 	}
 
-	cxt->offset_in_block += n_byte_read;
-	if (cxt->offset_in_block == 512) {
-		cxt->start_block++;
-		cxt->offset_in_block = 0;
+	offset_in_block += n_byte;
+	if (offset_in_block == 512) {
+		start_block++;
+		offset_in_block = 0;
 	}
 
-	while (count > n_byte_read && (n_block = (count - n_byte_read) >> 9)) {
-		n_block = cxt->mmc->block_dev.block_read(MMC_INTERNAL_DEVICE,
-				cxt->start_block, n_block, buf + n_byte_read);
-		cxt->start_block += n_block;
-		n_byte_read += (n_block << 9);
+	while (count > n_byte && (n_block = (count - n_byte) >> 9)) {
+		n_block = mmc->block_dev.block_read(MMC_INTERNAL_DEVICE,
+				start_block, n_block, buf + n_byte);
+		start_block += n_block;
+		n_byte += (n_block << 9);
 	}
 
-	if (count > n_byte_read) {
-		cxt->mmc->block_dev.block_read(MMC_INTERNAL_DEVICE,
-				cxt->start_block, 1, residual);
-		memcpy(buf + n_byte_read, residual, count - n_byte_read);
-		cxt->offset_in_block = count - n_byte_read;
+	if (count > n_byte) {
+		mmc->block_dev.block_read(MMC_INTERNAL_DEVICE,
+				start_block, 1, residual);
+		memcpy(buf + n_byte, residual, count - n_byte);
+		offset_in_block = count - n_byte;
 	}
 
 	free(residual);
-	return count;
+	return 0;
 }
 
-static ssize_t write_onestop(void *context, const void *buf, size_t count)
+static int write_mmc(struct mmc *mmc,
+		uint32_t start_block, uint32_t offset_in_block,
+		uint32_t offset, uint32_t count, void *buf)
 {
-	struct context *cxt = context;
 	uint32_t n_block;
-	size_t n_byte_write;
+	size_t n_byte;
 	uint8_t *residual;
 
-	VBDEBUG(PREFIX "write(count=%08x, buffer=%p)\n", (int)count, buf);
-
-	if (cxt->section == SECTION_RO)
-		return cxt->spi_file.write(cxt->spi_file.context, buf, count);
-
 	residual = memalign(CACHE_LINE_SIZE, 512);
-	n_byte_write = 0;
+	n_byte = 0;
 
-	if (cxt->offset_in_block) {
-		n_byte_write = MIN(512 - cxt->offset_in_block, count);
-		cxt->mmc->block_dev.block_read(MMC_INTERNAL_DEVICE,
-				cxt->start_block, 1, residual);
-		memcpy(residual + cxt->offset_in_block, buf, n_byte_write);
-		cxt->mmc->block_dev.block_read(MMC_INTERNAL_DEVICE,
-				cxt->start_block, 1, residual);
+	if (offset_in_block) {
+		n_byte = MIN(512 - offset_in_block, count);
+		mmc->block_dev.block_read(MMC_INTERNAL_DEVICE,
+				start_block, 1, residual);
+		memcpy(residual + offset_in_block, buf, n_byte);
+		mmc->block_dev.block_write(MMC_INTERNAL_DEVICE,
+				start_block, 1, residual);
 	}
 
-	cxt->offset_in_block += n_byte_write;
-	if (cxt->offset_in_block == 512) {
-		cxt->start_block++;
-		cxt->offset_in_block = 0;
+	offset_in_block += n_byte;
+	if (offset_in_block == 512) {
+		start_block++;
+		offset_in_block = 0;
 	}
 
-	while (count > n_byte_write && (n_block = (count - n_byte_write) >> 9)) {
-		n_block = cxt->mmc->block_dev.block_write(MMC_INTERNAL_DEVICE,
-				cxt->start_block, n_block, buf + n_byte_write);
-		cxt->start_block += n_block;
-		n_byte_write += (n_block << 9);
+	while (count > n_byte && (n_block = (count - n_byte) >> 9)) {
+		n_block = mmc->block_dev.block_write(MMC_INTERNAL_DEVICE,
+				start_block, n_block, buf + n_byte);
+		start_block += n_block;
+		n_byte += (n_block << 9);
 	}
 
-	if (count > n_byte_write) {
-		cxt->mmc->block_dev.block_read(MMC_INTERNAL_DEVICE,
-				cxt->start_block, 1, residual);
-		memcpy(residual, buf + n_byte_write, count - n_byte_write);
-		cxt->mmc->block_dev.block_write(MMC_INTERNAL_DEVICE,
-				cxt->start_block, 1, residual);
-		cxt->offset_in_block = count - n_byte_write;
+	if (count > n_byte) {
+		mmc->block_dev.block_read(MMC_INTERNAL_DEVICE,
+				start_block, 1, residual);
+		memcpy(residual, buf + n_byte, count - n_byte);
+		mmc->block_dev.block_write(MMC_INTERNAL_DEVICE,
+				start_block, 1, residual);
+		offset_in_block = count - n_byte;
 	}
 
 	free(residual);
-	return count;
+	return 0;
 }
 
-static int close_onestop(void *context)
+static int close_onestop(firmware_storage_t *file)
 {
-	struct context *cxt = context;
+	struct context *cxt = file->context;
 	int ret;
 
         ret = cxt->spi_file.close(cxt->spi_file.context);
 	free(cxt);
 
 	return ret;
-}
-
-static int lock_onestop(void *context)
-{
-	/* TODO Implement lock device */
-	return 0;
 }
 
 int firmware_storage_open_onestop(firmware_storage_t *file,
@@ -243,15 +239,10 @@ int firmware_storage_open_onestop(firmware_storage_t *file,
 	}
 	mmc_init(cxt->mmc);
 
-	cxt->start_block = 0;
-	cxt->offset_in_block = 0;
-
-	file->seek = seek_onestop;
 	file->read = read_onestop;
 	file->write = write_onestop;
 	file->close = close_onestop;
-	file->lock_device = lock_onestop;
-	file->context = (void*) cxt;
+	file->context = (void *)cxt;
 
 	return 0;
 }

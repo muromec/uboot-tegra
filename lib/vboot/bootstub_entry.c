@@ -50,14 +50,14 @@ static int read_verification_block(firmware_storage_t *file,
 	void *vblock;
 
 	/* read key block header */
-	if (firmware_storage_read(file, vblock_offset, sizeof(kbh), &kbh)) {
+	if (file->read(file, vblock_offset, sizeof(kbh), &kbh)) {
 		VbExDebug(PREFIX "Failed to read key block!\n");
 		return -1;
 	}
 	key_block_size = kbh.key_block_size;
 
 	/* read firmware preamble header */
-	if (firmware_storage_read(file, vblock_offset + key_block_size,
+	if (file->read(file, vblock_offset + key_block_size,
 				sizeof(fph), &fph)) {
 		VbExDebug(PREFIX "Failed to read preamble!\n");
 		return -1;
@@ -66,7 +66,7 @@ static int read_verification_block(firmware_storage_t *file,
 
 	vblock = VbExMalloc(vblock_size);
 
-	if (firmware_storage_read(file, vblock_offset, vblock_size, vblock)) {
+	if (file->read(file, vblock_offset, vblock_size, vblock)) {
 		VbExDebug(PREFIX "Failed to read verification block!\n");
 		VbExFree(vblock);
 		return -1;
@@ -237,7 +237,7 @@ void bootstub_entry(void)
 	 * The above VbSelectFirmware still needs firmware storage file.
 	 * So don't close until here.
 	 */
-	if (firmware_storage_close(&file))
+	if (file.close(&file))
 		VbExError(PREFIX "Failed to close firmware device!\n");
 
 	/* Handle the VbSelectFirmware() results */
