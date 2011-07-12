@@ -18,7 +18,4 @@
 #define CONFIG_CMD_VBEXPORT_TEST
 #define CONFIG_CMD_VBOOT_TEST
 
-#undef CONFIG_BOOTDELAY
-#define CONFIG_BOOTDELAY	-1	/* disable auto boot */
-
 #endif /* __configs_chromeos_seaboard_vboot_h__ */
