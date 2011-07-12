@@ -122,6 +122,9 @@ static int read_mmc(struct mmc *mmc,
 	size_t n_byte;
 	uint8_t *residual;
 
+	VBDEBUG(PREFIX "read_mmc(start_block=%08x, offset_in_block=%08x)\n",
+			start_block, offset_in_block);
+
 	residual = memalign(CACHE_LINE_SIZE, 512);
 	n_byte = 0;
 
@@ -163,6 +166,9 @@ static int write_mmc(struct mmc *mmc,
 	uint32_t n_block;
 	size_t n_byte;
 	uint8_t *residual;
+
+	VBDEBUG(PREFIX "write_mmc(start_block=%08x, offset_in_block=%08x)\n",
+			start_block, offset_in_block);
 
 	residual = memalign(CACHE_LINE_SIZE, 512);
 	n_byte = 0;

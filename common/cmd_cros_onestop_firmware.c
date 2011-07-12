@@ -161,6 +161,7 @@ static uint32_t init_internal_state_bottom_half(firmware_storage_t *file,
 	}
 
 	if (file->read(file,
+				fmap->readonly.ro_onestop.offset +
 				fmap->onestop_layout.fwid.offset,
 				fmap->onestop_layout.fwid.length,
 				frid)) {
@@ -290,6 +291,7 @@ static uint32_t load_kernel_subkey_a(firmware_storage_t *file,
 
 	VBDEBUG(PREFIX "reading kernel subkey A\n");
 	if (file->read(file,
+				fmap->readonly.ro_onestop.offset +
 				fmap->onestop_layout.vblock.offset,
 				fmap->onestop_layout.vblock.length,
 				key_block)) {
@@ -500,6 +502,7 @@ static uint32_t rewritable_boot_init(firmware_storage_t *file,
 	int w;
 
 	if (file->read(file,
+				fmap->readwrite_a.rw_a_onestop.offset +
 				fmap->onestop_layout.fwid.offset,
 				fmap->onestop_layout.fwid.length,
 				fwid)) {
