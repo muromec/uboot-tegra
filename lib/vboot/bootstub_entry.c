@@ -19,6 +19,8 @@
 
 #define PREFIX		"bootstub: "
 
+DECLARE_GLOBAL_DATA_PTR;
+
 static void prepare_cparams(vb_global_t *global, VbCommonParams *cparams)
 {
 	cparams->gbb_data = global->gbb_data;
@@ -82,24 +84,38 @@ static void prepare_fparams(firmware_storage_t *file,
 			    firmware_cache_t *cache,
 			    VbSelectFirmwareParams *fparams)
 {
+	void *fdt_ptr = (void *)gd->blob;
+	struct fdt_twostop_fmap fmap;
 	uint32_t fw_main_a_size, fw_main_b_size;
 
-	if (read_verification_block(file, CONFIG_OFFSET_VBLOCK_A,
-				    &fparams->verification_block_A,
-				    &fparams->verification_size_A,
-				    &fw_main_a_size))
+	if (fdt_decode_twostop_fmap(fdt_ptr, &fmap))
+		VbExError(PREFIX "Failed to load fmap config from fdt.\n");
+
+	if (read_verification_block(file,
+			fmap.readwrite_a.rw_a_onestop.offset +
+				fmap.onestop_layout.vblock.offset,
+			&fparams->verification_block_A,
+			&fparams->verification_size_A,
+			&fw_main_a_size))
 		VbExError(PREFIX "Failed to read verification block A!\n");
 
-	if (read_verification_block(file, CONFIG_OFFSET_VBLOCK_B,
-				    &fparams->verification_block_B,
-				    &fparams->verification_size_B,
-				    &fw_main_b_size))
+	if (read_verification_block(file,
+			fmap.readwrite_b.rw_b_onestop.offset +
+				fmap.onestop_layout.vblock.offset,
+			&fparams->verification_block_B,
+			&fparams->verification_size_B,
+			&fw_main_b_size))
 		VbExError(PREFIX "Failed to read verification block B!\n");
 
 	/* Prepare the firmware cache which is passed as caller_context. */
-	init_firmware_cache(cache, file,
-			CONFIG_OFFSET_FW_MAIN_A, fw_main_a_size,
-			CONFIG_OFFSET_FW_MAIN_B, fw_main_b_size);
+	init_firmware_cache(cache,
+			file,
+			fmap.readwrite_a.rw_a_onestop.offset +
+				fmap.onestop_layout.fwbody.offset,
+			fw_main_a_size,
+			fmap.readwrite_b.rw_b_onestop.offset +
+				fmap.onestop_layout.fwbody.offset,
+			fw_main_b_size);
 }
 
 static void release_fparams(VbSelectFirmwareParams *fparams)
