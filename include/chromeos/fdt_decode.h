@@ -27,6 +27,7 @@ struct fdt_onestop_fmap {
 	} onestop_layout;
 
 	struct {
+		struct fdt_fmap_entry readonly;
 		struct fdt_fmap_entry fmap;
 		struct fdt_fmap_entry gbb;
 	} readonly;

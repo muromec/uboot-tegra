@@ -58,66 +58,42 @@ int fdt_decode_onestop_fmap(const void *blob, struct fdt_onestop_fmap *config)
 	if (fmap_offset < 0)
 		return fmap_offset;
 
-	offset = fdt_decode_fmap_entry(blob, fmap_offset,
-			"/onestop-layout",
-			&config->onestop_layout.onestop_layout);
-	if (offset < 0)
+#define GET_ENTRY(path, entry) \
+	offset = fdt_decode_fmap_entry(blob, fmap_offset, path, \
+			&config->entry); \
+	if (offset < 0) \
 		return offset;
 
-	offset = fdt_decode_fmap_entry(blob, fmap_offset,
-			"/onestop-layout/firmware-image",
-			&config->onestop_layout.fwbody);
-	if (offset < 0)
-		return offset;
+	GET_ENTRY("/onestop-layout", onestop_layout.onestop_layout);
+	GET_ENTRY("/onestop-layout/firmware-image", onestop_layout.fwbody);
+	GET_ENTRY("/onestop-layout/verification-block", onestop_layout.vblock);
+	GET_ENTRY("/onestop-layout/firmware-id", onestop_layout.fwid);
+	GET_ENTRY("/readonly", readonly.readonly);
+	GET_ENTRY("/readonly/gbb", readonly.gbb);
+	GET_ENTRY("/readonly/fmap", readonly.fmap);
+	GET_ENTRY("/readwrite-a", readwrite_a);
+	GET_ENTRY("/readwrite-b", readwrite_b);
 
-	offset = fdt_decode_fmap_entry(blob, fmap_offset,
-			"/onestop-layout/verification-block",
-			&config->onestop_layout.vblock);
-	if (offset < 0)
-		return offset;
-
-	offset = fdt_decode_fmap_entry(blob, fmap_offset,
-			"/onestop-layout/firmware-id",
-			&config->onestop_layout.fwid);
-	if (offset < 0)
-		return offset;
-
-	offset = fdt_decode_fmap_entry(blob, fmap_offset,
-			"/readonly/gbb", &config->readonly.gbb);
-	if (offset < 0)
-		return offset;
-
-	offset = fdt_decode_fmap_entry(blob, fmap_offset,
-			"/readonly/fmap", &config->readonly.fmap);
-	if (offset < 0)
-		return offset;
-
-	offset = fdt_decode_fmap_entry(blob, fmap_offset,
-			"/readwrite-a", &config->readwrite_a);
-	if (offset < 0)
-		return offset;
-
-	offset = fdt_decode_fmap_entry(blob, fmap_offset,
-			"/readwrite-b", &config->readwrite_b);
-	if (offset < 0)
-		return offset;
+#undef GET_ENTRY
 
 	return 0;
 }
 
-static void dump_fmap_entry(struct fdt_fmap_entry *e, const char *name)
-{
-	VBDEBUG(PREFIX "%-20s %08x:%08x\n", name, e->offset, e->length);
-}
-
 void dump_fmap(struct fdt_onestop_fmap *config)
 {
-	dump_fmap_entry(&config->onestop_layout.onestop_layout, "onestop_layout");
-	dump_fmap_entry(&config->onestop_layout.fwbody, "fwbody");
-	dump_fmap_entry(&config->onestop_layout.vblock, "vblock");
-	dump_fmap_entry(&config->onestop_layout.fwid, "fwid");
-	dump_fmap_entry(&config->readonly.fmap, "fmap");
-	dump_fmap_entry(&config->readonly.gbb, "gbb");
-	dump_fmap_entry(&config->readwrite_a, "readwrite_a");
-	dump_fmap_entry(&config->readwrite_b, "readwrite_b");
+#define PRINT_ENTRY(entry, tag) \
+	VBDEBUG(PREFIX "%-20s %08x:%08x\n", tag, \
+			config->entry.offset, config->entry.length)
+
+	PRINT_ENTRY(onestop_layout.onestop_layout, "onestop_layout");
+	PRINT_ENTRY(onestop_layout.fwbody, "fwbody");
+	PRINT_ENTRY(onestop_layout.vblock, "vblock");
+	PRINT_ENTRY(onestop_layout.fwid, "fwid");
+	PRINT_ENTRY(readonly.readonly, "readonly");
+	PRINT_ENTRY(readonly.fmap, "fmap");
+	PRINT_ENTRY(readonly.gbb, "gbb");
+	PRINT_ENTRY(readwrite_a, "readwrite_a");
+	PRINT_ENTRY(readwrite_b, "readwrite_b");
+
+#undef PRINT_ENTRY
 }
