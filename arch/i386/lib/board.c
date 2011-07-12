@@ -196,7 +196,8 @@ gd_t *gd;
 static int calculate_relocation_address(void)
 {
 	void *text_start = &__text_start;
-	void *bss_end = &__bss_end;
+	/* keep .bss variables aligned */
+	void *bss_end = (void *)ALIGN((ulong)&__bss_end, 1<<12);
 	void *dest_addr;
 	ulong rel_offset;
 
