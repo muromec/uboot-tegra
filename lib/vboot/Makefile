@@ -12,11 +12,11 @@ include $(TOPDIR)/config.mk
 
 LIB	= $(obj)libvboot.a
 
-COBJS-$(CONFIG_VBOOT_WRAPPER) += boot_kernel.o
-COBJS-$(CONFIG_VBOOT_WRAPPER) += bootstub_entry.o
-COBJS-$(CONFIG_VBOOT_WRAPPER) += firmware_cache.o
-COBJS-$(CONFIG_VBOOT_WRAPPER) += global_data.o
-COBJS-$(CONFIG_VBOOT_WRAPPER) += main_entry.o
+COBJS-$(CONFIG_CHROMEOS_VBOOT) += boot_kernel.o
+COBJS-$(CONFIG_CHROMEOS_VBOOT) += bootstub_entry.o
+COBJS-$(CONFIG_CHROMEOS_VBOOT) += firmware_cache.o
+COBJS-$(CONFIG_CHROMEOS_VBOOT) += global_data.o
+COBJS-$(CONFIG_CHROMEOS_VBOOT) += main_entry.o
 
 COBJS	:= $(COBJS-y)
 OBJS	:= $(addprefix $(obj),$(COBJS))

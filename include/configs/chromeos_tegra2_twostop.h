@@ -10,6 +10,8 @@
 /* TODO This should be renamed to chromeos_tegra2_common.h? */
 #include <configs/chromeos_seaboard_common.h>
 
+#define CONFIG_CHROMEOS_VBEXPORT
+
 /* entry point of twostop firmware */
 #define CONFIG_CMD_VBOOT_TWOSTOP
 

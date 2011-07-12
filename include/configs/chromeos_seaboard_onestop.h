@@ -9,10 +9,12 @@
 
 #include <configs/chromeos_seaboard_common.h>
 
+#define CONFIG_CHROMEOS_ONESTOP
+
+/* TODO: Remove this flag; only need the wrapper APIs for now */
+#define CONFIG_CHROMEOS_VBEXPORT
+
 /* entry point of onestop firmware */
 #define CONFIG_CMD_CROS_ONESTOP_FIRMWARE
-
-/* Need the wrapper APIs now */
-#define CONFIG_VBOOT_WRAPPER
 
 #endif /* __configs_chromeos_seaboard_onestop_h__ */
