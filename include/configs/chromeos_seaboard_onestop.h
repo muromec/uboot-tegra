@@ -9,8 +9,6 @@
 
 #include <configs/chromeos_seaboard_common.h>
 
-#define CHROMEOS_RW_FIRMWARE_START_LBA 34
-
 /* entry point of onestop firmware */
 #define CONFIG_CMD_CROS_ONESTOP_FIRMWARE
 

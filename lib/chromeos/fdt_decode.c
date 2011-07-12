@@ -16,12 +16,9 @@
 
 #define PREFIX "chromeos/fdt_decode: "
 
-static int fdt_decode_fmap_entry(const void *blob, int offset, const char *path,
-		struct fdt_fmap_entry *config)
+static int fdt_relpath_offset(const void *fdt, int offset, const char *path)
 {
 	const char *sep;
-	int length;
-	uint32_t *property;
 
 	/* skip leading '/' */
 	while (*path == '/')
@@ -33,19 +30,50 @@ static int fdt_decode_fmap_entry(const void *blob, int offset, const char *path,
 		if (!sep)
 			sep = path + strlen(path);
 
-		offset = fdt_subnode_offset_namelen(blob, offset, path,
+		offset = fdt_subnode_offset_namelen(fdt, offset, path,
 				sep - path);
 		if (offset < 0)
 			return offset;
 	}
 
-	property = (uint32_t *)fdt_getprop(blob, offset, "reg", &length);
+	return offset;
+}
+
+static int fdt_decode_fmap_entry(const void *fdt, int offset, const char *path,
+		struct fdt_fmap_entry *config)
+{
+	int length;
+	uint32_t *property;
+
+	offset = fdt_relpath_offset(fdt, offset, path);
+	if (offset < 0)
+		return offset;
+
+	property = (uint32_t *)fdt_getprop(fdt, offset, "reg", &length);
 	if (!property)
 		return length;
 
 	config->offset = fdt32_to_cpu(property[0]);
 	config->length = fdt32_to_cpu(property[1]);
 
+	return 0;
+}
+
+static int fdt_decode_block_lba(const void *fdt, int offset, const char *path,
+		uint64_t *out)
+{
+	int length;
+	uint32_t *property;
+
+	offset = fdt_relpath_offset(fdt, offset, path);
+	if (offset < 0)
+		return offset;
+
+	property = (uint32_t *)fdt_getprop(fdt, offset, "block-lba", &length);
+	if (!property)
+		return length;
+
+	*out = fdt32_to_cpu(*property);
 	return 0;
 }
 
@@ -63,11 +91,11 @@ static int fdt_decode_fmap_entry(const void *blob, int offset, const char *path,
 	ACT_ON_ENTRY("/readwrite-b", readwrite_b.readwrite_b); \
 	ACT_ON_ENTRY("/rw-b-onestop", readwrite_b.rw_b_onestop);
 
-int fdt_decode_twostop_fmap(const void *blob, struct fdt_twostop_fmap *config)
+int fdt_decode_twostop_fmap(const void *fdt, struct fdt_twostop_fmap *config)
 {
 	int fmap_offset, offset;
 
-	fmap_offset = fdt_node_offset_by_compatible(blob, -1,
+	fmap_offset = fdt_node_offset_by_compatible(fdt, -1,
 			"chromeos,flashmap");
 	if (fmap_offset < 0) {
 		VBDEBUG(PREFIX "no compatible node exists\n");
@@ -75,16 +103,30 @@ int fdt_decode_twostop_fmap(const void *blob, struct fdt_twostop_fmap *config)
 	}
 
 #define ACT_ON_ENTRY(path, entry) \
-	offset = fdt_decode_fmap_entry(blob, fmap_offset, path, \
+	offset = fdt_decode_fmap_entry(fdt, fmap_offset, path, \
 			&config->entry); \
 	if (offset < 0) { \
-		VBDEBUG(PREFIX "load %s fail\n", path); \
+		VBDEBUG(PREFIX "failed to load %s\n", path); \
 		return offset; \
 	}
 
 	LIST_OF_ENTRIES
 
 #undef ACT_ON_ENTRY
+
+	offset = fdt_decode_block_lba(fdt, fmap_offset, "/readwrite-a",
+			&config->readwrite_a.block_lba);
+	if (offset < 0) {
+		VBDEBUG(PREFIX "failed to load LBA of slot A\n");
+		return offset;
+	}
+
+	offset = fdt_decode_block_lba(fdt, fmap_offset, "/readwrite-b",
+			&config->readwrite_b.block_lba);
+	if (offset < 0) {
+		VBDEBUG(PREFIX "failed to load LBA of slot B\n");
+		return offset;
+	}
 
 	return 0;
 }
@@ -98,4 +140,9 @@ void dump_fmap(struct fdt_twostop_fmap *config)
 	LIST_OF_ENTRIES
 
 #undef ACT_ON_ENTRY
+
+	VBDEBUG(PREFIX "readwrite-a: block %08llx\n",
+			config->readwrite_a.block_lba);
+	VBDEBUG(PREFIX "readwrite-b: block %08llx\n",
+			config->readwrite_b.block_lba);
 }

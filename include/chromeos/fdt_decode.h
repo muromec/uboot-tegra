@@ -40,15 +40,17 @@ struct fdt_twostop_fmap {
 	struct {
 		struct fdt_fmap_entry readwrite_a;
 		struct fdt_fmap_entry rw_a_onestop;
+		uint64_t block_lba;
 	} readwrite_a;
 
 	struct {
 		struct fdt_fmap_entry readwrite_b;
 		struct fdt_fmap_entry rw_b_onestop;
+		uint64_t block_lba;
 	} readwrite_b;
 };
 
-int fdt_decode_twostop_fmap(const void *blob, struct fdt_twostop_fmap *config);
+int fdt_decode_twostop_fmap(const void *fdt, struct fdt_twostop_fmap *config);
 
 void dump_fmap(struct fdt_twostop_fmap *config);
 

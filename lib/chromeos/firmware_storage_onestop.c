@@ -51,11 +51,9 @@ static void set_start_block_and_offset(const struct fdt_twostop_fmap *fmap,
 		int section, uint32_t offset,
 		uint32_t *start_block_ptr, uint32_t *offset_in_block_ptr)
 {
-	/* TODO load starting LBA from fdt */
-	*start_block_ptr = CHROMEOS_RW_FIRMWARE_START_LBA;
-	if (section == SECTION_RW_B)
-		*start_block_ptr +=
-			(fmap->onestop_layout.onestop_layout.length >> 9);
+	*start_block_ptr = (section == SECTION_RW_A) ?
+		fmap->readwrite_a.block_lba :
+		fmap->readwrite_b.block_lba;
 
 	*offset_in_block_ptr = offset - ((section == SECTION_RW_A) ?
 			fmap->readwrite_a.readwrite_a.offset :

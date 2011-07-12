@@ -140,6 +140,7 @@
 		readwrite-a@200000 {
 			label = "readwrite-a";
 			reg = <0x00200000 0x00080000>;
+			block-lba = <0x00000022>;
 		};
 		rw-a-onestop@200000 {
 			label = "rw-a-onestop";
@@ -149,6 +150,7 @@
 		readwrite-b@300000 {
 			label = "readwrite-b";
 			reg = <0x00300000 0x00080000>;
+			block-lba = <0x00000422>;
 		};
 		rw-b-onestop@300000 {
 			label = "rw-b-onestop";
