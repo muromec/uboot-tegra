@@ -30,9 +30,6 @@
 
 #define CONFIG_OF_UPDATE_FDT_BEFORE_BOOT
 
-/* load bootcmd from fdt */
-#undef CONFIG_BOOTCOMMAND
-
 /*
  * Use a smaller firmware image layout for Seaboard because it has
  * only 16MBit (=2MB) of SPI Flash.
