@@ -277,7 +277,8 @@ void main_loop (void)
 	int rc = 1;
 	int flag;
 #endif
-#ifdef CONFIG_OF_CONTROL
+#if defined(CONFIG_BOOTDELAY) && (CONFIG_BOOTDELAY >= 0) && \
+    defined(CONFIG_OF_CONTROL)
 	char *env;
 #endif
 #if defined(CONFIG_BOOTDELAY) && (CONFIG_BOOTDELAY >= 0)
