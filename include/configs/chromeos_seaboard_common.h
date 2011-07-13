@@ -11,8 +11,11 @@
 
 #define CONFIG_CHROMEOS
 
-/* don't load the environment until we enter developer mode */
-#define CONFIG_DELAY_ENVIRONMENT
+/*
+ * Use the fdt to decide whether to load the environment early in start-up
+ * (even before we decide if we're entering developer mode).
+ */
+#define CONFIG_OF_LOAD_ENVIRONMENT
 
 /* for security reason, Chrome OS kernel must be loaded to specific location */
 #define CONFIG_CHROMEOS_KERNEL_LOADADDR	0x00100000
