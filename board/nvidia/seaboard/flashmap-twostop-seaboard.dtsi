@@ -19,7 +19,7 @@
 		#size-cells = <1>;
 		compatible = "winbond,W25Q32BVSSIG", "cfi-flash",
 			     "chromeos,flashmap";
-		reg = <0x00000000 0x00400000>;
+		reg = <0x00000000 0x00200000>;
 
 		/* ---- Onestop Blob Layout; not a real section ---- */
 		onestop-layout@0 {
@@ -90,31 +90,31 @@
 		};
 
 		/* ---- Section: Readwrite ---- */
-		readwrite@300000 {
+		readwrite@200000 {
 			label = "readwrite";
-			reg = <0x00300000 0x00100000>;
+			reg = <0x00200000 0x00000000>;
 		};
-		rw-vpd@300000 {
+		rw-vpd@200000 {
 			label = "rw-vpd";
-			reg = <0x00300000 0x00080000>;
+			reg = <0x00200000 0x00000000>;
 			type = "wiped";
 			wipe-value = [ff];
 		};
-		shared-dev-cfg@380000 {
+		shared-dev-cfg@200000 {
 			label = "shared-dev-cfg";
-			reg = <0x00380000 0x00040000>;
+			reg = <0x00200000 0x00000000>;
 			type = "wiped";
 			wipe-value = [00];
 		};
-		shared-data@3c0000 {
+		shared-data@200000 {
 			label = "shared-data";
-			reg = <0x003c0000 0x00030000>;
+			reg = <0x00200000 0x00000000>;
 			type = "wiped";
 			wipe-value = [00];
 		};
-		shared-env@3ff000 {
+		shared-env@200000 {
 			label = "shared-env";
-			reg = <0x003ff000 0x00001000>;
+			reg = <0x00200000 0x00000000>;
 
 			/*
 			 * We could put the dev environment here, but U-Boot
@@ -127,24 +127,24 @@
 
 		/* ---- Section: Readwrite Slot A and B ---- */
 		/* So far only onestop is put into readwrite A/B section */
-		readwrite-a@200000 {
+		readwrite-a@100000 {
 			label = "readwrite-a";
-			reg = <0x00200000 0x00080000>;
+			reg = <0x00100000 0x00080000>;
 			block-lba = <0x00000022>;
 		};
-		rw-a-onestop@200000 {
+		rw-a-onestop@100000 {
 			label = "rw-a-onestop";
-			reg = <0x00200000 0x00080000>;
+			reg = <0x00100000 0x00080000>;
 			type = "blob boot";
 		};
-		readwrite-b@280000 {
+		readwrite-b@180000 {
 			label = "readwrite-b";
-			reg = <0x00280000 0x00080000>;
+			reg = <0x00180000 0x00080000>;
 			block-lba = <0x00000422>;
 		};
-		rw-b-onestop@280000 {
+		rw-b-onestop@180000 {
 			label = "rw-b-onestop";
-			reg = <0x00280000 0x00080000>;
+			reg = <0x00180000 0x00080000>;
 			type = "blob boot";
 		};
 	};
