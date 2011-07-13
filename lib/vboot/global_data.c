@@ -11,7 +11,7 @@
 #include <common.h>
 #include <fdt_decode.h>
 #include <vboot_api.h>
-#include <chromeos/gpio.h>
+#include <chromeos/cros_gpio.h>
 #include <vboot/global_data.h>
 
 #define PREFIX		"global_data: "
@@ -29,9 +29,7 @@ vb_global_t *get_vboot_global(void)
 int init_vboot_global(vb_global_t *global, firmware_storage_t *file)
 {
 	void *fdt_ptr = (void *)gd->blob;
-	int polarity_write_protect_sw, polarity_recovery_sw,
-	    polarity_developer_sw;
-	int write_protect_sw, recovery_sw, developer_sw;
+	cros_gpio_t wpsw, recsw, devsw;
 	struct fdt_twostop_fmap fmap;
 	char frid[ID_LEN];
 	uint8_t nvraw[VBNV_BLOCK_SIZE];
@@ -41,19 +39,12 @@ int init_vboot_global(vb_global_t *global, firmware_storage_t *file)
 			VBGLOBAL_SIGNATURE_SIZE);
 
 	/* Get GPIO status */
-	polarity_write_protect_sw = fdt_decode_get_config_int(fdt_ptr,
-			"polarity_write_protect_switch", GPIO_ACTIVE_HIGH);
-	polarity_recovery_sw = fdt_decode_get_config_int(fdt_ptr,
-			"polarity_recovery_switch", GPIO_ACTIVE_HIGH);
-	polarity_developer_sw = fdt_decode_get_config_int(fdt_ptr,
-			"polarity_developer_switch", GPIO_ACTIVE_HIGH);
-
-	write_protect_sw = is_firmware_write_protect_gpio_asserted(
-			polarity_write_protect_sw);
-	recovery_sw = is_recovery_mode_gpio_asserted(
-			polarity_recovery_sw);
-	developer_sw = is_developer_mode_gpio_asserted(
-			polarity_developer_sw);
+	if (cros_gpio_fetch(CROS_GPIO_WPSW, fdt_ptr, &wpsw) ||
+			cros_gpio_fetch(CROS_GPIO_RECSW, fdt_ptr, &recsw) ||
+			cros_gpio_fetch(CROS_GPIO_DEVSW, fdt_ptr, &devsw)) {
+		VbExDebug(PREFIX "Failed to fetch GPIO!\n");
+		return 1;
+        }
 
 	if (fdt_decode_twostop_fmap(fdt_ptr, &fmap)) {
 		VbExDebug(PREFIX "Failed to load fmap config from fdt!\n");
@@ -91,9 +82,9 @@ int init_vboot_global(vb_global_t *global, firmware_storage_t *file)
 		return 1;
 	}
 
-	if (crossystem_data_init(&global->cdata_blob, fdt_ptr, frid,
+	if (crossystem_data_init(&global->cdata_blob, frid,
 			fmap.readonly.fmap.offset, global->gbb_data, nvraw,
-			write_protect_sw, recovery_sw, developer_sw)) {
+			&wpsw, &recsw, &devsw)) {
 		VbExDebug(PREFIX "Failed to init crossystem data!\n");
 		return 1;
 	}

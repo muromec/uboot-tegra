@@ -10,7 +10,6 @@
 
 #include <common.h>
 #include <chromeos/firmware_storage.h>
-#include <chromeos/gpio.h>
 #include <chromeos/power_management.h>
 #include <vboot/entry_points.h>
 #include <vboot/firmware_cache.h>
