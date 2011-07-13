@@ -31,12 +31,12 @@ int fit_update_fdt_before_boot(char *fdt, ulong *new_size)
 
 	if (!g_crossystem_data) {
 		VBDEBUG(PREFIX "warning: g_crossystem_data is NULL\n");
-		return 1;
+		return 0;
 	}
 
 	if (crossystem_data_embed_into_fdt(g_crossystem_data, fdt, &ns)) {
 		VBDEBUG(PREFIX "crossystem_data_embed_into_fdt() failed\n");
-		return 1;
+		return 0;
 	}
 
 	*new_size = ns;
