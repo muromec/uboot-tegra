@@ -22,6 +22,15 @@
 #define PMIC_I2C_DEVICE_ADDRESS	0x34
 #define TPS6586X_SUPPLYENE	0x14
 
+extern int is_tegra2_cold_boot;
+
+int is_cold_boot(void)
+{
+	if (is_tegra2_cold_boot == ~0U)
+		VBDEBUG(PREFIX "error: is_tegra2_cold_boot uninitialized\n");
+	return is_tegra2_cold_boot ? 1 : 0;
+}
+
 /* This function never returns */
 void cold_reboot(void)
 {

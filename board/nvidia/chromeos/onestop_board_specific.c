@@ -11,14 +11,11 @@
 #include <common.h>
 #include <chromeos/common.h>
 #include <chromeos/onestop.h>
+#include <chromeos/power_management.h>
 
 #define PREFIX "onestop_helper: "
 
-extern int is_tegra2_cold_boot;
-
 int is_ro_firmware(void)
 {
-	if (is_tegra2_cold_boot == ~0U)
-		VBDEBUG(PREFIX "error: is_tegra2_cold_boot uninitialized\n");
-	return is_tegra2_cold_boot ? 1 : 0;
+	return is_cold_boot();
 }
