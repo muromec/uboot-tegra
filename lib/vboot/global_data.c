@@ -28,10 +28,11 @@ vb_global_t *get_vboot_global(void)
 
 int init_vboot_global(vb_global_t *global, firmware_storage_t *file)
 {
-	void *fdt = (void *)gd->blob;
-        int polarity_write_protect_sw, polarity_recovery_sw,
-            polarity_developer_sw;
+	void *fdt_ptr = (void *)gd->blob;
+	int polarity_write_protect_sw, polarity_recovery_sw,
+	    polarity_developer_sw;
 	int write_protect_sw, recovery_sw, developer_sw;
+	struct fdt_twostop_fmap fmap;
 	char frid[ID_LEN];
 	uint8_t nvraw[VBNV_BLOCK_SIZE];
 
@@ -39,21 +40,13 @@ int init_vboot_global(vb_global_t *global, firmware_storage_t *file)
 	memcpy(global->signature, VBGLOBAL_SIGNATURE,
 			VBGLOBAL_SIGNATURE_SIZE);
 
-	/* Load GBB from SPI */
-	global->gbb_size = CONFIG_LENGTH_GBB;
-	if (file->read(file, CONFIG_OFFSET_GBB,
-			CONFIG_LENGTH_GBB, global->gbb_data)) {
-		VbExDebug(PREFIX "Failed to read GBB!\n");
-		return 1;
-	}
-
 	/* Get GPIO status */
-        polarity_write_protect_sw = fdt_decode_get_config_int(fdt,
-                        "polarity_write_protect_switch", GPIO_ACTIVE_HIGH);
-        polarity_recovery_sw = fdt_decode_get_config_int(fdt,
-                        "polarity_recovery_switch", GPIO_ACTIVE_HIGH);
-        polarity_developer_sw = fdt_decode_get_config_int(fdt,
-                        "polarity_developer_switch", GPIO_ACTIVE_HIGH);
+	polarity_write_protect_sw = fdt_decode_get_config_int(fdt_ptr,
+			"polarity_write_protect_switch", GPIO_ACTIVE_HIGH);
+	polarity_recovery_sw = fdt_decode_get_config_int(fdt_ptr,
+			"polarity_recovery_switch", GPIO_ACTIVE_HIGH);
+	polarity_developer_sw = fdt_decode_get_config_int(fdt_ptr,
+			"polarity_developer_switch", GPIO_ACTIVE_HIGH);
 
 	write_protect_sw = is_firmware_write_protect_gpio_asserted(
 			polarity_write_protect_sw);
@@ -62,8 +55,33 @@ int init_vboot_global(vb_global_t *global, firmware_storage_t *file)
 	developer_sw = is_developer_mode_gpio_asserted(
 			polarity_developer_sw);
 
-	if (file->read(file, CONFIG_OFFSET_RO_FRID,
-			CONFIG_LENGTH_RO_FRID, frid)) {
+	if (fdt_decode_twostop_fmap(fdt_ptr, &fmap)) {
+		VbExDebug(PREFIX "Failed to load fmap config from fdt!\n");
+		return 1;
+	}
+
+	/* Load GBB from SPI */
+	if (fmap.readonly.gbb.length > CONFIG_LENGTH_GBB) {
+		VbExDebug(PREFIX "The GBB size declared in FDT is too big!\n");
+		return 1;
+	}
+	global->gbb_size = fmap.readonly.gbb.length;
+	if (file->read(file,
+			fmap.readonly.gbb.offset,
+			fmap.readonly.gbb.length,
+			global->gbb_data)) {
+		VbExDebug(PREFIX "Failed to read GBB!\n");
+		return 1;
+	}
+
+	if (fmap.onestop_layout.fwid.length > ID_LEN) {
+		VbExDebug(PREFIX "The FWID size declared in FDT is too big!\n");
+		return 1;
+	}
+	if (file->read(file,
+			fmap.onestop_layout.fwid.offset,
+			fmap.onestop_layout.fwid.length,
+			frid)) {
 		VbExDebug(PREFIX "Failed to read frid!\n");
 		return 1;
 	}
@@ -73,8 +91,8 @@ int init_vboot_global(vb_global_t *global, firmware_storage_t *file)
 		return 1;
 	}
 
-	if (crossystem_data_init(&global->cdata_blob, fdt, frid,
-			CONFIG_OFFSET_FMAP, global->gbb_data, nvraw,
+	if (crossystem_data_init(&global->cdata_blob, fdt_ptr, frid,
+			fmap.readonly.fmap.offset, global->gbb_data, nvraw,
 			write_protect_sw, recovery_sw, developer_sw)) {
 		VbExDebug(PREFIX "Failed to init crossystem data!\n");
 		return 1;
