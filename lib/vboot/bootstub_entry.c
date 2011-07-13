@@ -9,6 +9,8 @@
  */
 
 #include <common.h>
+#include <chromeos/crossystem_data.h>
+#include <chromeos/fdt_decode.h>
 #include <chromeos/firmware_storage.h>
 #include <chromeos/power_management.h>
 #include <vboot/entry_points.h>
@@ -82,26 +84,22 @@ static int read_verification_block(firmware_storage_t *file,
 
 static void prepare_fparams(firmware_storage_t *file,
 			    firmware_cache_t *cache,
+			    struct fdt_twostop_fmap *fmap,
 			    VbSelectFirmwareParams *fparams)
 {
-	void *fdt_ptr = (void *)gd->blob;
-	struct fdt_twostop_fmap fmap;
 	uint32_t fw_main_a_size, fw_main_b_size;
 
-	if (fdt_decode_twostop_fmap(fdt_ptr, &fmap))
-		VbExError(PREFIX "Failed to load fmap config from fdt.\n");
-
 	if (read_verification_block(file,
-			fmap.readwrite_a.rw_a_onestop.offset +
-				fmap.onestop_layout.vblock.offset,
+			fmap->readwrite_a.rw_a_onestop.offset +
+				fmap->onestop_layout.vblock.offset,
 			&fparams->verification_block_A,
 			&fparams->verification_size_A,
 			&fw_main_a_size))
 		VbExError(PREFIX "Failed to read verification block A!\n");
 
 	if (read_verification_block(file,
-			fmap.readwrite_b.rw_b_onestop.offset +
-				fmap.onestop_layout.vblock.offset,
+			fmap->readwrite_b.rw_b_onestop.offset +
+				fmap->onestop_layout.vblock.offset,
 			&fparams->verification_block_B,
 			&fparams->verification_size_B,
 			&fw_main_b_size))
@@ -110,11 +108,11 @@ static void prepare_fparams(firmware_storage_t *file,
 	/* Prepare the firmware cache which is passed as caller_context. */
 	init_firmware_cache(cache,
 			file,
-			fmap.readwrite_a.rw_a_onestop.offset +
-				fmap.onestop_layout.fwbody.offset,
+			fmap->readwrite_a.rw_a_onestop.offset +
+				fmap->onestop_layout.fwbody.offset,
 			fw_main_a_size,
-			fmap.readwrite_b.rw_b_onestop.offset +
-				fmap.onestop_layout.fwbody.offset,
+			fmap->readwrite_b.rw_b_onestop.offset +
+				fmap->onestop_layout.fwbody.offset,
 			fw_main_b_size);
 }
 
@@ -206,8 +204,42 @@ static VbError_t call_VbSelectFirmware(VbCommonParams *cparams,
 	return ret;
 }
 
+static int set_fwid_value(vb_global_t *global,
+			  firmware_storage_t *file,
+			  struct fdt_twostop_fmap *fmap,
+			  int index)
+{
+	crossystem_data_t *cdata = &global->cdata_blob;
+	char fwid[ID_LEN];
+	uint32_t fwid_offset;
+
+	fwid_offset = index ? fmap->readwrite_b.rw_b_onestop.offset
+			    : fmap->readwrite_a.rw_a_onestop.offset;
+	fwid_offset += fmap->onestop_layout.fwid.offset;
+
+	if (fmap->onestop_layout.fwid.length > ID_LEN) {
+		VbExDebug(PREFIX "The FWID size declared in FDT is too big!\n");
+		return 1;
+	}
+
+	if (file->read(file,
+			fwid_offset,
+			fmap->onestop_layout.fwid.length,
+			fwid)) {
+		VbExDebug(PREFIX "Failed to read FWID %d!\n", index);
+		return 1;
+	}
+
+	VbExDebug(PREFIX "Set FWID as %s\n", fwid);
+	crossystem_data_set_fwid(cdata, fwid);
+
+	return 0;
+}
+
 void bootstub_entry(void)
 {
+	void *fdt_ptr = (void *)gd->blob;
+	struct fdt_twostop_fmap fmap;
 	vb_global_t *global;
 	firmware_storage_t file;
 	firmware_cache_t cache;
@@ -215,6 +247,10 @@ void bootstub_entry(void)
 	VbInitParams iparams;
 	VbSelectFirmwareParams fparams;
 	VbError_t ret;
+	int index = 0;
+
+	if (fdt_decode_twostop_fmap(fdt_ptr, &fmap))
+		VbExError(PREFIX "Failed to load fmap config from fdt.\n");
 
 	/* Open firmware storage device */
 	if (firmware_storage_open_spi(&file))
@@ -242,38 +278,37 @@ void bootstub_entry(void)
 
 	/* Call VbSelectFirmware() */
 	cparams.caller_context = &cache;
-	prepare_fparams(&file, &cache, &fparams);
+	prepare_fparams(&file, &cache, &fmap, &fparams);
 	if ((ret = call_VbSelectFirmware(&cparams, &fparams)))
 		VbExError(PREFIX "VbSelectFirmare() returned error: 0x%lx!\n",
 				ret);
 	release_fparams(&fparams);
 
-	/*
-	 * The above VbSelectFirmware still needs firmware storage file.
-	 * So don't close until here.
-	 */
-	if (file.close(&file))
-		VbExError(PREFIX "Failed to close firmware device!\n");
-
 	/* Handle the VbSelectFirmware() results */
 	switch (fparams.selected_firmware) {
 	case VB_SELECT_FIRMWARE_A:
-		memcpy((void *)CONFIG_SYS_TEXT_BASE, cache.infos[0].buffer,
-				cache.infos[0].size);
-		jump_to_firmware((firmware_entry_t)CONFIG_SYS_TEXT_BASE);
+		index = 0;
 		break;
 
 	case VB_SELECT_FIRMWARE_B:
-		memcpy((void *)CONFIG_SYS_TEXT_BASE, cache.infos[1].buffer,
-				cache.infos[1].size);
-		jump_to_firmware((firmware_entry_t)CONFIG_SYS_TEXT_BASE);
+		index = 1;
 		break;
 
 	case VB_SELECT_FIRMWARE_RECOVERY:
+		/* Reboot to recovery mode */
+		cold_reboot();
+
 	default:
-		/* Continue the following reboot flow */
-		break;
+		VbExError(PREFIX "Unexpected selected firmware value!\n");
 	}
 
-	cold_reboot();
+	if (set_fwid_value(global, &file, &fmap, index))
+		VbExError(PREFIX "Failed to set RW FWID!\n");
+
+	if (file.close(&file))
+		VbExError(PREFIX "Failed to close firmware device!\n");
+
+	memcpy((void *)CONFIG_SYS_TEXT_BASE, cache.infos[index].buffer,
+			cache.infos[index].size);
+	jump_to_firmware((firmware_entry_t)CONFIG_SYS_TEXT_BASE);
 }
