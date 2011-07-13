@@ -18,6 +18,8 @@ COBJS-$(CONFIG_CHROMEOS_VBOOT) += firmware_cache.o
 COBJS-$(CONFIG_CHROMEOS_VBOOT) += global_data.o
 COBJS-$(CONFIG_CHROMEOS_VBOOT) += main_entry.o
 
+COBJS-$(CONFIG_CHROMEOS_TWOSTOP) += boot_kernel.o
+
 COBJS	:= $(COBJS-y)
 OBJS	:= $(addprefix $(obj),$(COBJS))
 

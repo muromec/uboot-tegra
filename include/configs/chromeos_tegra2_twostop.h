@@ -11,6 +11,7 @@
 #include <configs/chromeos_seaboard_common.h>
 
 #define CONFIG_CHROMEOS_VBEXPORT
+#define CONFIG_CHROMEOS_TWOSTOP
 
 /* entry point of twostop firmware */
 #define CONFIG_CMD_VBOOT_TWOSTOP
