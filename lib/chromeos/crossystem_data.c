@@ -28,9 +28,9 @@ enum {
 	CHSW_WRITE_PROTECT_DISABLED	= 0x200
 };
 
-int crossystem_data_init(crossystem_data_t *cdata, void *fdt, char *frid,
+int crossystem_data_init(crossystem_data_t *cdata, char *frid,
 		uint32_t fmap_data, void *gbb_data, void *nvcxt_raw,
-		int write_protect_sw, int recovery_sw, int developer_sw)
+		cros_gpio_t *wpsw, cros_gpio_t *recsw, cros_gpio_t *devsw)
 {
 	GoogleBinaryBlockHeader *gbbh = (GoogleBinaryBlockHeader *)gbb_data;
 
@@ -43,11 +43,11 @@ int crossystem_data_init(crossystem_data_t *cdata, void *fdt, char *frid,
 	strcpy(cdata->signature, "CHROMEOS");
 	cdata->version = SHARED_MEM_VERSION;
 
-	if (recovery_sw)
+	if (recsw->value)
 		cdata->chsw |= CHSW_RECOVERY_BUTTON_PRESSED;
-	if (developer_sw)
+	if (devsw->value)
 		cdata->chsw |= CHSW_DEVELOPER_MODE_ENABLED;
-	if (!write_protect_sw)
+	if (!wpsw->value)
 		cdata->chsw |= CHSW_WRITE_PROTECT_DISABLED;
 
 	strncpy(cdata->frid, frid, ID_LEN);
@@ -60,23 +60,17 @@ int crossystem_data_init(crossystem_data_t *cdata, void *fdt, char *frid,
 	/* recovery reason is default to VBNV_RECOVERY_NOT_REQUESTED */
 	cdata->binf[4] = VBNV_RECOVERY_NOT_REQUESTED;
 
-	cdata->write_protect_sw = write_protect_sw;
-	cdata->recovery_sw = recovery_sw;
-	cdata->developer_sw = developer_sw;
+	cdata->gpio_port_write_protect_sw = wpsw->port;
+	cdata->gpio_port_recovery_sw = recsw->port;
+	cdata->gpio_port_developer_sw = devsw->port;
 
-	cdata->gpio_port_write_protect_sw = fdt_decode_get_config_int(fdt,
-			"gpio_port_write_protect_switch", -1);
-	cdata->gpio_port_recovery_sw = fdt_decode_get_config_int(fdt,
-			"gpio_port_recovery_switch", -1);
-	cdata->gpio_port_developer_sw = fdt_decode_get_config_int(fdt,
-			"gpio_port_developer_switch", -1);
+	cdata->polarity_write_protect_sw = wpsw->polarity;
+	cdata->polarity_recovery_sw = recsw->polarity;
+	cdata->polarity_developer_sw = devsw->polarity;
 
-	cdata->polarity_write_protect_sw = fdt_decode_get_config_int(fdt,
-			"polarity_write_protect_switch", -1);
-	cdata->polarity_recovery_sw = fdt_decode_get_config_int(fdt,
-			"polarity_recovery_switch", -1);
-	cdata->polarity_developer_sw = fdt_decode_get_config_int(fdt,
-			"polarity_developer_switch", -1);
+	cdata->write_protect_sw = wpsw->value;
+	cdata->recovery_sw = recsw->value;
+	cdata->developer_sw = devsw->value;
 
 	cdata->vbnv[0] = 0;
 	cdata->vbnv[1] = VBNV_BLOCK_SIZE;

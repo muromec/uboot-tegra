@@ -18,7 +18,7 @@
 #include <chromeos/fdt_decode.h>
 #include <chromeos/firmware_storage.h>
 #include <chromeos/gbb_bmpblk.h>
-#include <chromeos/gpio.h>
+#include <chromeos/cros_gpio.h>
 #include <chromeos/load_kernel_helper.h>
 #include <chromeos/onestop.h>
 #include <chromeos/os_storage.h>
@@ -123,38 +123,21 @@ static uint32_t init_internal_state_bottom_half(firmware_storage_t *file,
 		crossystem_data_t *cdata, int *dev_mode, VbNvContext *nvcxt)
 {
 	char frid[ID_LEN];
-	int write_protect_sw, recovery_sw, developer_sw;
-	int polarity_write_protect_sw, polarity_recovery_sw,
-	    polarity_developer_sw;
+	cros_gpio_t wpsw, recsw, devsw;
 	uint32_t reason = VBNV_RECOVERY_NOT_REQUESTED;
 
-	/* load gpio polarity */
-	polarity_write_protect_sw = fdt_decode_get_config_int(fdt,
-			"polarity_write_protect_switch", GPIO_ACTIVE_HIGH);
-	polarity_recovery_sw = fdt_decode_get_config_int(fdt,
-			"polarity_recovery_switch", GPIO_ACTIVE_HIGH);
-	polarity_developer_sw = fdt_decode_get_config_int(fdt,
-			"polarity_developer_switch", GPIO_ACTIVE_HIGH);
+	if (cros_gpio_fetch(CROS_GPIO_WPSW, fdt, &wpsw) ||
+			cros_gpio_fetch(CROS_GPIO_RECSW, fdt, &recsw) ||
+			cros_gpio_fetch(CROS_GPIO_DEVSW, fdt, &devsw)) {
+		VBDEBUG(PREFIX "failed to fetch gpio\n");
+		reason = VBNV_RECOVERY_RO_UNSPECIFIED;
+	}
 
-	VBDEBUG(PREFIX "polarity:\n");
-	VBDEBUG(PREFIX "- wpsw:  %d\n", polarity_write_protect_sw);
-	VBDEBUG(PREFIX "- recsw: %d\n", polarity_recovery_sw);
-	VBDEBUG(PREFIX "- devsw: %d\n", polarity_developer_sw);
+	cros_gpio_dump(&wpsw);
+	cros_gpio_dump(&recsw);
+	cros_gpio_dump(&devsw);
 
-	/* fetch gpios at once */
-	write_protect_sw = is_firmware_write_protect_gpio_asserted(
-			polarity_write_protect_sw);
-	recovery_sw = is_recovery_mode_gpio_asserted(
-			polarity_recovery_sw);
-	developer_sw = is_developer_mode_gpio_asserted(
-			polarity_developer_sw);
-
-	VBDEBUG(PREFIX "gpio value:\n");
-	VBDEBUG(PREFIX "- wpsw:  %d\n", write_protect_sw);
-	VBDEBUG(PREFIX "- recsw: %d\n", recovery_sw);
-	VBDEBUG(PREFIX "- devsw: %d\n", developer_sw);
-
-	if (developer_sw) {
+	if (devsw.value) {
 		_state.boot_flags |= BOOT_FLAG_DEVELOPER;
 		_state.boot_flags |= BOOT_FLAG_DEV_FIRMWARE;
 		*dev_mode = 1;
@@ -169,13 +152,13 @@ static uint32_t init_internal_state_bottom_half(firmware_storage_t *file,
 		reason = VBNV_RECOVERY_RO_SHARED_DATA;
 	}
 
-	if (crossystem_data_init(cdata, fdt, frid, fmap->readonly.fmap.offset,
+	if (crossystem_data_init(cdata, frid, fmap->readonly.fmap.offset,
 				_state.gbb_data, nvcxt->raw,
-				write_protect_sw, recovery_sw, developer_sw)) {
+				&wpsw, &recsw, &devsw)) {
 		VBDEBUG(PREFIX "init crossystem data fail\n");
 		reason = VBNV_RECOVERY_RO_UNSPECIFIED;
 	}
-	if (recovery_sw) {
+	if (recsw.value) {
 		_state.boot_flags |= BOOT_FLAG_RECOVERY;
 		reason = VBNV_RECOVERY_RO_MANUAL;
 	}

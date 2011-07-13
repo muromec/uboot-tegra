@@ -11,6 +11,7 @@
 #ifndef __CHROMEOS_CROSSYSTEM_DATA_H__
 #define __CHROMEOS_CROSSYSTEM_DATA_H__
 
+#include <chromeos/cros_gpio.h>
 #include <vboot_nvstorage.h>
 #include <vboot_struct.h>
 
@@ -58,19 +59,18 @@ typedef struct {
  * - The recovery reason is default to VBNV_RECOVERY_NOT_REQUESTED.
  *
  * @param cdata is the data blob shared with crossystem
- * @param fdt points to a device tree
  * @param frid r/o firmware id; a zero-terminated string shorter than ID_LEN
  * @param fmap_data is the address of fmap in firmware
  * @param gbb_data points to gbb blob
  * @param nvcxt_raw points to the VbNvContext raw data
- * @param write_protect_sw stores the value of write protect gpio
- * @param recovery_sw stores the value of recovery mode gpio
- * @param developer_sw stores the value of developer mode gpio
+ * @param wpsw stores the value of write protect gpio
+ * @param recsw stores the value of recovery mode gpio
+ * @param devsw stores the value of developer mode gpio
  * @return 0 if it succeeds; non-zero if it fails
  */
-int crossystem_data_init(crossystem_data_t *cdata, void *fdt, char *frid,
+int crossystem_data_init(crossystem_data_t *cdata, char *frid,
 		uint32_t fmap_data, void *gbb_data, void *nvcxt_raw,
-		int write_protect_sw, int recovery_sw, int developer_sw);
+		cros_gpio_t *wpsw, cros_gpio_t *recsw, cros_gpio_t *devsw);
 
 /**
  * This sets rewritable firmware id. It should only be called in non-recovery
