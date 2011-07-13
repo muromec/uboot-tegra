@@ -213,7 +213,7 @@ static int close_twostop(firmware_storage_t *file)
 	struct context *cxt = file->context;
 	int ret;
 
-        ret = cxt->spi_file.close(cxt->spi_file.context);
+	ret = cxt->spi_file.close(&cxt->spi_file);
 	free(cxt);
 
 	return ret;
