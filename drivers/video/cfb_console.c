@@ -205,8 +205,7 @@ CONFIG_VIDEO_HW_CURSOR:	     - Uses the hardware cursor capability of the
 /*****************************************************************************/
 /* Cursor definition:							     */
 /* CONFIG_CONSOLE_CURSOR:  Uses a timer function (see drivers/input/i8042.c) */
-/*                         to let the cursor blink. Uses the macros	     */
-/*                         CURSOR_OFF and CURSOR_ON.			     */
+/*                         to let the cursor blink.			     */
 /* CONFIG_VIDEO_SW_CURSOR: Draws a cursor after the last character. No	     */
 /*			   blinking is provided. Uses the macros CURSOR_SET  */
 /*			   and CURSOR_OFF.				     */
@@ -230,9 +229,9 @@ CONFIG_VIDEO_HW_CURSOR:	     - Uses the hardware cursor capability of the
 #error	only one of CONFIG_CONSOLE_CURSOR,CONFIG_VIDEO_SW_CURSOR,CONFIG_VIDEO_HW_CURSOR can be defined
 #endif
 void	console_cursor (int state);
-#define CURSOR_ON  console_cursor(1)
+#define CURSOR_ON console_cursor(1)
 #define CURSOR_OFF console_cursor(0)
-#define CURSOR_SET
+#define CURSOR_SET video_set_cursor()
 #ifndef CONFIG_I8042_KBD
 #warning Cursor drawing on/off needs timer function s.a. drivers/input/i8042.c
 #endif
@@ -246,9 +245,9 @@ void	console_cursor (int state);
 #ifdef	CURSOR_ON
 #error	only one of CONFIG_CONSOLE_CURSOR,CONFIG_VIDEO_SW_CURSOR,CONFIG_VIDEO_HW_CURSOR can be defined
 #endif
-#define CURSOR_ON
-#define CURSOR_OFF video_putchar(console_col * VIDEO_FONT_WIDTH,\
-				 console_row * VIDEO_FONT_HEIGHT, ' ')
+void	console_cursor (int state);
+#define CURSOR_ON console_cursor(1)
+#define CURSOR_OFF console_cursor(0)
 #define CURSOR_SET video_set_cursor()
 #endif /* CONFIG_VIDEO_SW_CURSOR */
 
@@ -351,6 +350,10 @@ static void *video_console_address;	/* console buffer start address */
 
 static int video_logo_height = VIDEO_LOGO_HEIGHT;
 
+static int cursor_state = 0;
+static int old_col = 0;
+static int old_row = 0;
+
 static int console_col = 0; /* cursor col */
 static int console_row = 0; /* cursor row */
 
@@ -404,6 +407,23 @@ static const int video_font_draw_table32[16][4] = {
 	    { 0x00ffffff, 0x00ffffff, 0x00ffffff, 0x00000000 },
 	    { 0x00ffffff, 0x00ffffff, 0x00ffffff, 0x00ffffff } };
 
+
+/******************************************************************************/
+
+static void video_invertchar (int xx, int yy)
+{
+	int firstx = xx * VIDEO_PIXEL_SIZE;
+	int lastx = (xx + VIDEO_FONT_WIDTH) * VIDEO_PIXEL_SIZE;
+	int firsty = yy * VIDEO_LINE_LEN;
+	int lasty = (yy + VIDEO_FONT_HEIGHT) * VIDEO_LINE_LEN;
+	int x, y;
+	for (y = firsty; y < lasty; y += VIDEO_LINE_LEN) {
+		for (x = firstx; x < lastx; x++) {
+			u8 *dest = (u8 *)(video_fb_address) + x + y;
+			*dest = ~*dest;
+		}
+	}
+}
 
 /******************************************************************************/
 
@@ -536,28 +556,15 @@ static void video_putchar (int xx, int yy, unsigned char c)
 #if defined(CONFIG_CONSOLE_CURSOR) || defined(CONFIG_VIDEO_SW_CURSOR)
 static void video_set_cursor (void)
 {
-	/* swap drawing colors */
-	eorx = fgx;
-	fgx = bgx;
-	bgx = eorx;
-	eorx = fgx ^ bgx;
-	/* draw cursor */
-	video_putchar (console_col * VIDEO_FONT_WIDTH,
-		       console_row * VIDEO_FONT_HEIGHT,
-		       ' ');
-	/* restore drawing colors */
-	eorx = fgx;
-	fgx = bgx;
-	bgx = eorx;
-	eorx = fgx ^ bgx;
+	if (cursor_state)
+		console_cursor(0);
+	console_cursor(1);
 }
-#endif
-/*****************************************************************************/
-#ifdef CONFIG_CONSOLE_CURSOR
+
+/******************************************************************************/
+
 void console_cursor (int state)
 {
-	static int last_state = 0;
-
 #ifdef CONFIG_CONSOLE_TIME
 	struct rtc_time tm;
 	char info[16];
@@ -578,18 +585,20 @@ void console_cursor (int state)
 	}
 #endif
 
-	if (state && (last_state != state)) {
-		video_set_cursor ();
+	if (cursor_state != state) {
+		if (cursor_state) {
+			/* turn off the cursor */
+			video_invertchar(old_col * VIDEO_FONT_WIDTH,
+			                 old_row * VIDEO_FONT_HEIGHT);
+		} else {
+			/* turn off the cursor and record where it is */
+			video_invertchar(console_col * VIDEO_FONT_WIDTH,
+				         console_row * VIDEO_FONT_HEIGHT);
+			old_col = console_col;
+			old_row = console_row;
+		}
+		cursor_state = state;
 	}
-
-	if (!state && (last_state != state)) {
-		/* clear cursor */
-		video_putchar (console_col * VIDEO_FONT_WIDTH,
-			       console_row * VIDEO_FONT_HEIGHT,
-			       ' ');
-	}
-
-	last_state = state;
 }
 #endif
 
@@ -660,22 +669,13 @@ static void console_back (void)
 		if (console_row < 0)
 			console_row = 0;
 	}
-	video_putchar (console_col * VIDEO_FONT_WIDTH,
-		       console_row * VIDEO_FONT_HEIGHT,
-		       ' ');
+	CURSOR_SET;
 }
 
 /*****************************************************************************/
 
 static void console_newline (void)
 {
-	/* Check if last character in the line was just drawn. If so, cursor was
-	   overwriten and need not to be cleared. Cursor clearing without this
-	   check causes overwriting the 1st character of the line if line lenght
-	   is >= CONSOLE_COLS
-	 */
-	if (console_col < CONSOLE_COLS)
-		CURSOR_OFF;
 	console_row++;
 	console_col = 0;
 
@@ -691,7 +691,6 @@ static void console_newline (void)
 
 static void console_cr (void)
 {
-	CURSOR_OFF;
 	console_col = 0;
 }
 
@@ -700,6 +699,8 @@ static void console_cr (void)
 void video_putc (const char c)
 {
 	static int nl = 1;
+
+	CURSOR_OFF;
 
 	switch (c) {
 	case 13:		/* back to first column */
@@ -713,7 +714,6 @@ void video_putc (const char c)
 		break;
 
 	case 9:		/* tab 8 */
-		CURSOR_OFF;
 		console_col |= 0x0008;
 		console_col &= ~0x0007;
 
