@@ -1180,6 +1180,7 @@ static int hub_port_reset(struct usb_device *dev, int port,
 			wait_ms(10 + 40);
 			/* FALL THROUGH */
 		case -1:
+		case -ENOTCONN:
 			/* we have finished trying to reset, so return */
 			usb_clear_port_feature(dev,
 				port + 1, USB_PORT_FEAT_C_RESET);
