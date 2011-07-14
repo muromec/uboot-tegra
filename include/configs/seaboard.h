@@ -40,6 +40,8 @@
 #ifndef CONFIG_OF_CONTROL
 /* Things in here are defined by the device tree now. Let it grow! */
 
+#define CONFIG_TEGRA2_BOARD_STRING	"NVIDIA Seaboard"
+
 #define CONFIG_TEGRA2_ENABLE_UARTD
 #define CONFIG_SYS_NS16550_COM1		NV_PA_APB_UARTD_BASE
 

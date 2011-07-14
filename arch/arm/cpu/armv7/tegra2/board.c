@@ -26,6 +26,7 @@
 #include <asm/arch/sys_proto.h>
 #include <asm/arch/tegra2.h>
 #include <asm/arch/pmc.h>
+#include <fdt_decode.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -69,12 +70,12 @@ int dram_init(void)
 	return 0;
 }
 
-#ifdef CONFIG_DISPLAY_BOARDINFO
+#if defined(CONFIG_DISPLAY_BOARDINFO) || defined(CONFIG_DISPLAY_BOARDINFO_LATE)
 int checkboard(void)
 {
 	const char* board_name;
 #ifdef CONFIG_OF_CONTROL
-	board_name = get_board_name();
+	board_name = fdt_decode_get_model(gd->blob);
 #else
 	board_name = sysinfo.board_string;
 #endif
