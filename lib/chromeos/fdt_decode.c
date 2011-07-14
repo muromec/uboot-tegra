@@ -83,7 +83,8 @@ static int fdt_decode_block_lba(const void *fdt, int offset, const char *path,
 	ACT_ON_ENTRY("/verification-block", onestop_layout.vblock); \
 	ACT_ON_ENTRY("/firmware-id", onestop_layout.fwid); \
 	ACT_ON_ENTRY("/readonly", readonly.readonly); \
-	ACT_ON_ENTRY("/ro-onestop", readonly.ro_onestop); \
+	ACT_ON_ENTRY("/ro-firmware-image", readonly.ro_firmware_image); \
+	ACT_ON_ENTRY("/ro-firmware-id", readonly.ro_firmware_id); \
 	ACT_ON_ENTRY("/fmap", readonly.fmap); \
 	ACT_ON_ENTRY("/gbb", readonly.gbb); \
 	ACT_ON_ENTRY("/readwrite-a", readwrite_a.readwrite_a); \

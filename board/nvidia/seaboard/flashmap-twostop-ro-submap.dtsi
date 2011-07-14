@@ -1,0 +1,65 @@
+/*
+ * Copyright (c) 2011 The Chromium OS Authors. All rights reserved.
+ * Use of this source code is governed by a BSD-style license that can be
+ * found in the LICENSE file.
+ */
+
+/*
+ * This is a sub-fmap embedded into twostop fmap. This sub-fmap defines
+ * the layout of the R/O portion.
+ *
+ * The R/O blobs only consumes 1 MB space so that it could be possible to
+ * squeeze the final image (R/O + R/W) into 2 MB space. As a result, even if
+ * the target machine has a 4 MB flash chip and enables write-protect for the
+ * first 2 MB space, only the first 1 MB will contain R/O blobs and the rest
+ * 1 MB will be empty.
+ */
+
+/ {
+	flash@0 {
+		readonly@0 {
+			label = "readonly";
+			reg = <0x00000000 0x00100000>;
+			read-only;
+		};
+
+		ro-firmware-image@0 {
+			label = "ro-firmware-image";
+			reg = <0x00000000 0x000bfb00>; /* ~785 KB */
+			read-only;
+			type = "blob signed";
+		};
+		ro-firmware-id@bfb00 {
+			label = "ro-onestop";
+			reg = <0x000bfb00 0x00000100>;
+			read-only;
+		};
+
+		gbb@bfc00 {
+			label = "gbb";
+			reg = <0x000bfc00 0x00020000>;
+			read-only;
+			type = "blob gbb";
+		};
+		ro-data@dfc00 {
+			label = "ro-data";
+			reg = <0x000dfc00 0x00010000>;
+			read-only;
+		};
+		ro-vpd@efc00 {
+			label = "ro-vpd";
+			reg = <0x000efc00 0x00010000>;
+			read-only;
+			type = "wiped";
+			wipe-value = [ff];
+		};
+		fmap@ffc00 {
+			label = "ro-fmap";
+			reg = <0x000ffc00 0x00000400>;
+			read-only;
+			type = "fmap";
+			ver-major = <1>;
+			ver-minor = <0>;
+		};
+	};
+};

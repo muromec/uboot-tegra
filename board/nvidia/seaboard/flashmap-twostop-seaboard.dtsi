@@ -13,6 +13,9 @@
  * All sections will be marked static in the fmap.
  */
 
+/include/ "onestop-layout.dtsi"
+/include/ "flashmap-twostop-ro-submap.dtsi"
+
 / {
 	flash@0 {
 		#address-cells = <1>;
@@ -21,100 +24,32 @@
 			     "chromeos,flashmap";
 		reg = <0x00000000 0x00200000>;
 
-		/* ---- Onestop Blob Layout; not a real section ---- */
-		onestop-layout@0 {
-			/* size: 512 KB */
-			label = "onestop-layout";
-			reg = <0x00000000 0x00080000>;
-		};
-		/* U-Boot image including fdt: first ~503 KB */
-		firmware-image@0 {
-			label = "firmware-image";
-			reg = <0x00000000 0x0007df00>;
-		};
-		/* verification block: 8 KB */
-		verification-block@7df00 {
-			label = "verification-block";
-			reg = <0x0007df00 0x00002000>;
-		};
-		/* frimware ID: 256 Bytes */
-		firmware-id@7ff00 {
-			label = "firmware-id";
-			reg = <0x0007ff00 0x00000100>;
-		};
-
-		/* ---- Section: Read-only ---- */
-		readonly@0 {
-			label = "readonly";
-			reg = <0x00000000 0x00100000>;
-			read-only;
-		};
-		bct@0 { /* Tegra's board config table: 64 KB */
-			label = "bct";
-			reg = <0x00000000 0x00010000>;
-			read-only;
-			type = "blob signed";
-		};
-		/* R/O section's copy of onestop */
-		ro-onestop@10000 {
-			label = "ro-onestop";
-			reg = <0x00010000 0x00080000>;
-			read-only;
-			type = "blob boot";
-		};
-		gbb@90000 {
-			label = "gbb";
-			reg = <0x00090000 0x00020000>;
-			read-only;
-			type = "blob gbb";
-		};
-		ro-data@b0000 {
-			label = "ro-data";
-			reg = <0x000b0000 0x00010000>;
-			read-only;
-		};
-		ro-vpd@c0000 {
-			label = "ro-vpd";
-			reg = <0x000c0000 0x00010000>;
-			read-only;
-			type = "wiped";
-			wipe-value = [ff];
-		};
-		fmap@d0000 {
-			label = "ro-fmap";
-			reg = <0x000d0000 0x00000400>;
-			read-only;
-			type = "fmap";
-			ver-major = <1>;
-			ver-minor = <0>;
-		};
-
 		/* ---- Section: Readwrite ---- */
-		readwrite@200000 {
+		readwrite@1e4000 {
 			label = "readwrite";
-			reg = <0x00200000 0x00000000>;
+			reg = <0x001e4000 0x00000000>;
 		};
-		rw-vpd@200000 {
+		rw-vpd@1e4000 {
 			label = "rw-vpd";
-			reg = <0x00200000 0x00000000>;
+			reg = <0x001e4000 0x00001000>;
 			type = "wiped";
 			wipe-value = [ff];
 		};
-		shared-dev-cfg@200000 {
+		shared-dev-cfg@1e5000 {
 			label = "shared-dev-cfg";
-			reg = <0x00200000 0x00000000>;
+			reg = <0x001e5000 0x00001000>;
 			type = "wiped";
 			wipe-value = [00];
 		};
-		shared-data@200000 {
+		shared-data@1e6000 {
 			label = "shared-data";
-			reg = <0x00200000 0x00000000>;
+			reg = <0x001e6000 0x00001000>;
 			type = "wiped";
 			wipe-value = [00];
 		};
-		shared-env@200000 {
+		shared-env@1e7000 {
 			label = "shared-env";
-			reg = <0x00200000 0x00000000>;
+			reg = <0x001e7000 0x00019000>;
 
 			/*
 			 * We could put the dev environment here, but U-Boot
@@ -129,22 +64,22 @@
 		/* So far only onestop is put into readwrite A/B section */
 		readwrite-a@100000 {
 			label = "readwrite-a";
-			reg = <0x00100000 0x00080000>;
+			reg = <0x00100000 0x00072000>;
 			block-lba = <0x00000022>;
 		};
 		rw-a-onestop@100000 {
 			label = "rw-a-onestop";
-			reg = <0x00100000 0x00080000>;
+			reg = <0x00100000 0x00072000>;
 			type = "blob boot";
 		};
-		readwrite-b@180000 {
+		readwrite-b@172000 {
 			label = "readwrite-b";
-			reg = <0x00180000 0x00080000>;
+			reg = <0x00172000 0x00072000>;
 			block-lba = <0x00000422>;
 		};
-		rw-b-onestop@180000 {
+		rw-b-onestop@172000 {
 			label = "rw-b-onestop";
-			reg = <0x00180000 0x00080000>;
+			reg = <0x00172000 0x00072000>;
 			type = "blob boot";
 		};
 	};

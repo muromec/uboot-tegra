@@ -32,7 +32,8 @@ struct fdt_twostop_fmap {
 
 	struct {
 		struct fdt_fmap_entry readonly;
-		struct fdt_fmap_entry ro_onestop;
+		struct fdt_fmap_entry ro_firmware_image;
+		struct fdt_fmap_entry ro_firmware_id;
 		struct fdt_fmap_entry fmap;
 		struct fdt_fmap_entry gbb;
 	} readonly;

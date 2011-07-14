@@ -13,6 +13,25 @@
  * All sections will be marked static in the fmap.
  */
 
+/include/ "onestop-layout.dtsi"
+/include/ "flashmap-twostop-ro-submap.dtsi"
+
+/*
+ * TODO: Although we can squeeze R/O and R/W blobs into 2 MB, we do not do
+ * so because:
+ *
+ * - (A minor reason) Not every 4 MB flash chip can write-protect just the
+ *   first 1 MB.
+ *
+ * - (The main reason) We do not know how many tools or scripts implicitly
+ *   assume that R/O section consumes the first half 2 MB.
+ *
+ * In the long run, we should find and fix all those tools and scripts that
+ * have incorrect implicit assumption of R/O section, but for now, we just
+ * cannot squeeze the image size down to 2 MB at the risk of wrongly write-
+ * protecting the R/W blobs.
+ */
+
 / {
 	flash@0 {
 		#address-cells = <1>;
@@ -20,74 +39,6 @@
 		compatible = "winbond,W25Q32BVSSIG", "cfi-flash",
 			     "chromeos,flashmap";
 		reg = <0x00000000 0x00400000>;
-
-		/* ---- Onestop Blob Layout; not a real section ---- */
-		onestop-layout@0 {
-			/* size: 512 KB */
-			label = "onestop-layout";
-			reg = <0x00000000 0x00080000>;
-		};
-		/* U-Boot image including fdt: first ~503 KB */
-		firmware-image@0 {
-			label = "firmware-image";
-			reg = <0x00000000 0x0007df00>;
-		};
-		/* verification block: 8 KB */
-		verification-block@7df00 {
-			label = "verification-block";
-			reg = <0x0007df00 0x00002000>;
-		};
-		/* frimware ID: 256 Bytes */
-		firmware-id@7ff00 {
-			label = "firmware-id";
-			reg = <0x0007ff00 0x00000100>;
-		};
-
-		/* ---- Section: Read-only ---- */
-		readonly@0 {
-			label = "readonly";
-			reg = <0x00000000 0x00100000>;
-			read-only;
-		};
-		bct@0 { /* Tegra's board config table: 64 KB */
-			label = "bct";
-			reg = <0x00000000 0x00010000>;
-			read-only;
-			type = "blob signed";
-		};
-		/* R/O section's copy of onestop */
-		ro-onestop@10000 {
-			label = "ro-onestop";
-			reg = <0x00010000 0x00080000>;
-			read-only;
-			type = "blob boot";
-		};
-		gbb@90000 {
-			label = "gbb";
-			reg = <0x00090000 0x00020000>;
-			read-only;
-			type = "blob gbb";
-		};
-		ro-data@b0000 {
-			label = "ro-data";
-			reg = <0x000b0000 0x00010000>;
-			read-only;
-		};
-		ro-vpd@c0000 {
-			label = "ro-vpd";
-			reg = <0x000c0000 0x00010000>;
-			read-only;
-			type = "wiped";
-			wipe-value = [ff];
-		};
-		fmap@d0000 {
-			label = "ro-fmap";
-			reg = <0x000d0000 0x00000400>;
-			read-only;
-			type = "fmap";
-			ver-major = <1>;
-			ver-minor = <0>;
-		};
 
 		/* ---- Section: Readwrite ---- */
 		readwrite@300000 {
@@ -112,9 +63,9 @@
 			type = "wiped";
 			wipe-value = [00];
 		};
-		shared-env@3ff000 {
+		shared-env@3f0000 {
 			label = "shared-env";
-			reg = <0x003ff000 0x00001000>;
+			reg = <0x003f0000 0x00010000>;
 
 			/*
 			 * We could put the dev environment here, but U-Boot
@@ -126,7 +77,7 @@
 		};
 
 		/* ---- Section: Readwrite Slot A and B ---- */
-		/* So far only onestop is put into readwrite A/B section */
+		/* So far only a onestop blob is put into readwrite A/B slot */
 		readwrite-a@200000 {
 			label = "readwrite-a";
 			reg = <0x00200000 0x00080000>;
@@ -134,8 +85,7 @@
 		};
 		rw-a-onestop@200000 {
 			label = "rw-a-onestop";
-			reg = <0x00200000 0x00080000>;
-			type = "blob boot";
+			reg = <0x00200000 0x00072000>;
 		};
 		readwrite-b@280000 {
 			label = "readwrite-b";
@@ -144,8 +94,7 @@
 		};
 		rw-b-onestop@280000 {
 			label = "rw-b-onestop";
-			reg = <0x00280000 0x00080000>;
-			type = "blob boot";
+			reg = <0x00280000 0x00072000>;
 		};
 	};
 };

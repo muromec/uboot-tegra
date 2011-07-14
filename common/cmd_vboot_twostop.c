@@ -117,7 +117,7 @@ int twostop_read_firmware_id(twostop_t *tdata,
 
 	switch (tdata->whoami) {
 	case I_AM_RO_FW:
-		firmware_id_offset += fmap->readonly.ro_onestop.offset;
+		firmware_id_offset = fmap->readonly.ro_firmware_id.offset;
 		break;
 	case I_AM_RW_A_FW:
 		firmware_id_offset += fmap->readwrite_a.rw_a_onestop.offset;
