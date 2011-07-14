@@ -34,7 +34,7 @@ struct ehci_hccr *hccr;	/* R/O registers, not need for volatile */
 volatile struct ehci_hcor *hcor;
 
 static uint16_t portreset;
-static struct QH *qh_list;
+static struct QH qh_list __attribute__((aligned(32)));
 
 static struct descriptor {
 	struct usb_hub_descriptor hub;
@@ -260,31 +260,17 @@ out:
 
 static void *ehci_alloc(size_t sz, size_t align)
 {
-	static struct QH *qh;
-	static struct qTD *td;
+	static struct QH qh __attribute__((aligned(32)));
+	static struct qTD td[3] __attribute__((aligned (32)));
 	static int ntds;
 	void *p;
 
 	switch (sz) {
 	case sizeof(struct QH):
-		if (!qh) {
-			qh = memalign(sizeof(struct QH), sizeof(struct QH));
-			if (qh == NULL) {
-				printf("ehci_alloc: QH allocation failed\n");
-				return NULL;
-			}
-		}
-		p = qh;
+		p = &qh;
 		ntds = 0;
 		break;
 	case sizeof(struct qTD):
-		if (!td) {
-			td = memalign(sizeof(struct qTD), 3*sizeof(struct qTD));
-			if (td == NULL) {
-				printf("ehci_alloc: TDs allocation failed\n");
-				return NULL;
-			}
-		}
 		if (ntds == 3) {
 			debug("out of TDs\n");
 			return NULL;
@@ -378,7 +364,7 @@ ehci_submit_async(struct usb_device *dev, unsigned long pipe, void *buffer,
 		debug("unable to allocate QH\n");
 		return -1;
 	}
-	qh->qh_link = cpu_to_hc32((uint32_t)qh_list | QH_LINK_TYPE_QH);
+	qh->qh_link = cpu_to_hc32((uint32_t)&qh_list | QH_LINK_TYPE_QH);
 	c = (usb_pipespeed(pipe) != USB_SPEED_HIGH &&
 	     usb_pipeendpoint(pipe) == 0) ? 1 : 0;
 	endpt = (8 << 28) |
@@ -467,10 +453,10 @@ ehci_submit_async(struct usb_device *dev, unsigned long pipe, void *buffer,
 		tdp = &td->qt_next;
 	}
 
-	qh_list->qh_link = cpu_to_hc32((uint32_t) qh | QH_LINK_TYPE_QH);
+	qh_list.qh_link = cpu_to_hc32((uint32_t) qh | QH_LINK_TYPE_QH);
 
 	/* Flush dcache */
-	ehci_flush_dcache(qh_list);
+	ehci_flush_dcache(&qh_list);
 
 	usbsts = ehci_readl(&hcor->or_usbsts);
 	ehci_writel(&hcor->or_usbsts, (usbsts & 0x3f));
@@ -493,7 +479,7 @@ ehci_submit_async(struct usb_device *dev, unsigned long pipe, void *buffer,
 	timeout = USB_TIMEOUT_MS(pipe);
 	do {
 		/* Invalidate dcache */
-		ehci_invalidate_dcache(qh_list);
+		ehci_invalidate_dcache(&qh_list);
 		token = hc32_to_cpu(vtd->qt_token);
 		if (!(token & 0x80))
 			break;
@@ -518,7 +504,7 @@ ehci_submit_async(struct usb_device *dev, unsigned long pipe, void *buffer,
 		goto fail;
 	}
 
-	qh_list->qh_link = cpu_to_hc32((uint32_t)qh_list | QH_LINK_TYPE_QH);
+	qh_list.qh_link = cpu_to_hc32((uint32_t)&qh_list | QH_LINK_TYPE_QH);
 
 	token = hc32_to_cpu(qh->qh_overlay.qt_token);
 	if (!(token & 0x80)) {
@@ -868,24 +854,17 @@ int usb_lowlevel_init(void)
 	if (ehci_readl(&hccr->cr_hccparams) & 1) /* 64-bit Addressing */
 		ehci_writel(&hcor->or_ctrldssegment, 0);
 
-	/* ensure queue head list 32-byte alignment */
-	qh_list = memalign(32, sizeof(struct QH));
-	if (qh_list == NULL) {
-		printf("Unable to allocate qh_list\n");
-		return -1;
-	}
-
 	/* Set head of reclaim list */
-	memset(qh_list, 0, sizeof(*qh_list));
-	qh_list->qh_link = cpu_to_hc32((uint32_t)qh_list | QH_LINK_TYPE_QH);
-	qh_list->qh_endpt1 = cpu_to_hc32((1 << 15) | (USB_SPEED_HIGH << 12));
-	qh_list->qh_curtd = cpu_to_hc32(QT_NEXT_TERMINATE);
-	qh_list->qh_overlay.qt_next = cpu_to_hc32(QT_NEXT_TERMINATE);
-	qh_list->qh_overlay.qt_altnext = cpu_to_hc32(QT_NEXT_TERMINATE);
-	qh_list->qh_overlay.qt_token = cpu_to_hc32(0x40);
+	memset(&qh_list, 0, sizeof(qh_list));
+	qh_list.qh_link = cpu_to_hc32((uint32_t)&qh_list | QH_LINK_TYPE_QH);
+	qh_list.qh_endpt1 = cpu_to_hc32((1 << 15) | (USB_SPEED_HIGH << 12));
+	qh_list.qh_curtd = cpu_to_hc32(QT_NEXT_TERMINATE);
+	qh_list.qh_overlay.qt_next = cpu_to_hc32(QT_NEXT_TERMINATE);
+	qh_list.qh_overlay.qt_altnext = cpu_to_hc32(QT_NEXT_TERMINATE);
+	qh_list.qh_overlay.qt_token = cpu_to_hc32(0x40);
 
 	/* Set async. queue head pointer. */
-	ehci_writel(&hcor->or_asynclistaddr, (uint32_t)qh_list);
+	ehci_writel(&hcor->or_asynclistaddr, (uint32_t)&qh_list);
 
 	reg = ehci_readl(&hccr->cr_hcsparams);
 	descriptor.hub.bNbrPorts = HCS_N_PORTS(reg);
