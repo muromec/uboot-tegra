@@ -34,7 +34,7 @@ static void prepare_cparams(vb_global_t *global, VbCommonParams *cparams)
 static void prepare_iparams(vb_global_t *global, VbInitParams *iparams)
 {
 	crossystem_data_t *cdata = &global->cdata_blob;
-	iparams->flags = 0;
+	iparams->flags = VB_INIT_FLAG_RO_NORMAL_SUPPORT;
 	if (cdata->developer_sw)
 		iparams->flags |= VB_INIT_FLAG_DEV_SWITCH_ON;
 	if (cdata->recovery_sw)
@@ -207,14 +207,33 @@ static VbError_t call_VbSelectFirmware(VbCommonParams *cparams,
 static int set_fwid_value(vb_global_t *global,
 			  firmware_storage_t *file,
 			  struct fdt_twostop_fmap *fmap,
-			  int index)
+			  uint32_t selected_firmware)
 {
 	crossystem_data_t *cdata = &global->cdata_blob;
 	char fwid[ID_LEN];
 	uint32_t fwid_offset;
 
-	fwid_offset = index ? fmap->readwrite_b.rw_b_onestop.offset
-			    : fmap->readwrite_a.rw_a_onestop.offset;
+	switch (selected_firmware) {
+	case VB_SELECT_FIRMWARE_A:
+		fwid_offset = fmap->readwrite_a.rw_a_onestop.offset;
+		break;
+
+	case VB_SELECT_FIRMWARE_B:
+		fwid_offset = fmap->readwrite_b.rw_b_onestop.offset;
+		break;
+
+	case VB_SELECT_FIRMWARE_RECOVERY:
+		fwid_offset = fmap->readonly.ro_onestop.offset;
+		break;
+
+	case VB_SELECT_FIRMWARE_READONLY:
+		fwid_offset = fmap->readonly.ro_onestop.offset;
+		break;
+
+	default:
+		return 1;
+	}
+
 	fwid_offset += fmap->onestop_layout.fwid.offset;
 
 	if (fmap->onestop_layout.fwid.length > ID_LEN) {
@@ -226,7 +245,7 @@ static int set_fwid_value(vb_global_t *global,
 			fwid_offset,
 			fmap->onestop_layout.fwid.length,
 			fwid)) {
-		VbExDebug(PREFIX "Failed to read FWID %d!\n", index);
+		VbExDebug(PREFIX "Failed to read FWID!\n");
 		return 1;
 	}
 
@@ -247,7 +266,6 @@ void bootstub_entry(void)
 	VbInitParams iparams;
 	VbSelectFirmwareParams fparams;
 	VbError_t ret;
-	int index = 0;
 
 	if (fdt_decode_twostop_fmap(fdt_ptr, &fmap))
 		VbExError(PREFIX "Failed to load fmap config from fdt.\n");
@@ -284,31 +302,39 @@ void bootstub_entry(void)
 				ret);
 	release_fparams(&fparams);
 
+	if (set_fwid_value(global, &file, &fmap, fparams.selected_firmware))
+		VbExError(PREFIX "Failed to set FWID!\n");
+
+	if (file.close(&file))
+		VbExError(PREFIX "Failed to close firmware device!\n");
+
 	/* Handle the VbSelectFirmware() results */
 	switch (fparams.selected_firmware) {
 	case VB_SELECT_FIRMWARE_A:
-		index = 0;
+		memcpy((void *)CONFIG_SYS_TEXT_BASE, cache.infos[0].buffer,
+				cache.infos[0].size);
+		jump_to_firmware((firmware_entry_t)CONFIG_SYS_TEXT_BASE);
 		break;
 
 	case VB_SELECT_FIRMWARE_B:
-		index = 1;
+		memcpy((void *)CONFIG_SYS_TEXT_BASE, cache.infos[1].buffer,
+				cache.infos[1].size);
+		jump_to_firmware((firmware_entry_t)CONFIG_SYS_TEXT_BASE);
 		break;
 
 	case VB_SELECT_FIRMWARE_RECOVERY:
-		/* Reboot to recovery mode */
-		cold_reboot();
+		VbExDebug(PREFIX "Boot to recovery mode...\n");
+		main_entry();
+		break;
+
+	case VB_SELECT_FIRMWARE_READONLY:
+		VbExDebug(PREFIX "Boot to RO firmware...\n");
+		main_entry();
+		break;
 
 	default:
 		VbExError(PREFIX "Unexpected selected firmware value!\n");
 	}
 
-	if (set_fwid_value(global, &file, &fmap, index))
-		VbExError(PREFIX "Failed to set RW FWID!\n");
-
-	if (file.close(&file))
-		VbExError(PREFIX "Failed to close firmware device!\n");
-
-	memcpy((void *)CONFIG_SYS_TEXT_BASE, cache.infos[index].buffer,
-			cache.infos[index].size);
-	jump_to_firmware((firmware_entry_t)CONFIG_SYS_TEXT_BASE);
+	VbExError(PREFIX "Should not reach here!\n");
 }
