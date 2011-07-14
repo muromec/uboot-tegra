@@ -120,6 +120,8 @@ int crossystem_data_embed_into_fdt(crossystem_data_t *cdata, void *fdt,
 {
 	char path[] = "/firmware/chromeos";
 	int nodeoffset, err;
+	int gpio_phandle;
+	int gpio_prop[3];
 
 	err = fdt_open_into(fdt, fdt,
 			fdt_totalsize(fdt) + sizeof(*cdata) + 4096);
@@ -128,6 +130,24 @@ int crossystem_data_embed_into_fdt(crossystem_data_t *cdata, void *fdt,
 		return 1;
 	}
 	*size_ptr = fdt_totalsize(fdt);
+
+	/* TODO: Upstream device tree is moving from tegra250 to
+	 * tegra20. Keep the check for 250 around for now but it can be
+	 * removed once the changes have trickled down.
+	 */
+	nodeoffset = fdt_node_offset_by_compatible(fdt, 0,
+						   "nvidia,tegra20-gpio");
+	if (nodeoffset <= 0)
+		nodeoffset = fdt_node_offset_by_compatible(fdt, 0,
+						   "nvidia,tegra250-gpio");
+
+	gpio_phandle = fdt_get_phandle(fdt, nodeoffset);
+	if (gpio_phandle <= 0) {
+		gpio_phandle = fdt_alloc_phandle(fdt);
+		fdt_setprop_cell(fdt, nodeoffset,
+				 "linux,phandle", gpio_phandle);
+	}
+	gpio_prop[0] = cpu_to_fdt32(gpio_phandle);
 
 	nodeoffset = fdt_add_subnodes_from_path(fdt, 0, path);
 	if (nodeoffset < 0) {
@@ -139,68 +159,76 @@ int crossystem_data_embed_into_fdt(crossystem_data_t *cdata, void *fdt,
 	fdt_setprop_string(fdt, nodeoffset, "compatible", "chromeos-firmware");
 
 #define set_scalar_prop(name, f) \
-	err |= fdt_setprop_cell(fdt, nodeoffset, name, cdata->f)
+	fdt_setprop_cell(fdt, nodeoffset, name, cdata->f)
 #define set_array_prop(name, f) \
-	err |= fdt_setprop(fdt, nodeoffset, name, cdata->f, sizeof(cdata->f))
+	fdt_setprop(fdt, nodeoffset, name, cdata->f, sizeof(cdata->f))
 #define set_string_prop(name, f) \
-	err |= fdt_setprop_string(fdt, nodeoffset, name, cdata->f)
+	fdt_setprop_string(fdt, nodeoffset, name, cdata->f)
 #define set_conststring_prop(name, str) \
-	err |= fdt_setprop_string(fdt, nodeoffset, name, str)
+	fdt_setprop_string(fdt, nodeoffset, name, str)
 #define set_bool_prop(name, f) \
-	if (cdata->f) err |= fdt_setprop(fdt, nodeoffset, name, NULL, 0)
+	((cdata->f) ? fdt_setprop(fdt, nodeoffset, name, NULL, 0) : 0)
 
 	err = 0;
-	set_scalar_prop("total-size", total_size);
-	set_string_prop("signature", signature);
-	set_scalar_prop("version", version);
-	set_scalar_prop("nonvolatile-context-lba", nvcxt_lba);
-	set_scalar_prop("nonvolatile-context-offset", vbnv[0]);
-	set_scalar_prop("nonvolatile-context-size", vbnv[1]);
-	set_array_prop("boot-nonvolatile-cache", nvcxt_cache);
+	err |= set_scalar_prop("total-size", total_size);
+	err |= set_string_prop("signature", signature);
+	err |= set_scalar_prop("version", version);
+	err |= set_scalar_prop("nonvolatile-context-lba", nvcxt_lba);
+	err |= set_scalar_prop("nonvolatile-context-offset", vbnv[0]);
+	err |= set_scalar_prop("nonvolatile-context-size", vbnv[1]);
+	err |= set_array_prop("boot-nonvolatile-cache", nvcxt_cache);
 
-	set_bool_prop("boot-write-protect-switch", write_protect_sw);
-	set_bool_prop("boot-recovery-switch", recovery_sw);
-	set_bool_prop("boot-developer-switch", developer_sw);
+	err |= set_bool_prop("boot-write-protect-switch", write_protect_sw);
+	err |= set_bool_prop("boot-recovery-switch", recovery_sw);
+	err |= set_bool_prop("boot-developer-switch", developer_sw);
 
-	set_scalar_prop("write-protect-switch-gpio", gpio_port_write_protect_sw);
-	set_scalar_prop("recovery-switch-gpio", gpio_port_recovery_sw);
-	set_scalar_prop("developer-switch-gpio", gpio_port_developer_sw);
-	set_scalar_prop("write-protect-switch-polarity", polarity_write_protect_sw);
-	set_scalar_prop("recovery-switch-polarity", polarity_recovery_sw);
-	set_scalar_prop("developer-switch-polarity", polarity_developer_sw);
+	gpio_prop[1] = cpu_to_fdt32(cdata->gpio_port_write_protect_sw);
+	gpio_prop[2] = cpu_to_fdt32(cdata->polarity_write_protect_sw);
+	err |= fdt_setprop(fdt, nodeoffset, "write-protect-switch",
+			   gpio_prop, sizeof(gpio_prop));
 
-	set_scalar_prop("boot-reason", binf[0]);
+	gpio_prop[1] = cpu_to_fdt32(cdata->gpio_port_recovery_sw);
+	gpio_prop[2] = cpu_to_fdt32(cdata->polarity_recovery_sw);
+	err |= fdt_setprop(fdt, nodeoffset, "recovery-switch",
+			   gpio_prop, sizeof(gpio_prop));
+
+	gpio_prop[1] = cpu_to_fdt32(cdata->gpio_port_developer_sw);
+	gpio_prop[2] = cpu_to_fdt32(cdata->polarity_developer_sw);
+	err |= fdt_setprop(fdt, nodeoffset, "developer-switch",
+			   gpio_prop, sizeof(gpio_prop));
+
+	err |= set_scalar_prop("boot-reason", binf[0]);
 	switch (cdata->binf[1]) {
 	case 0:
-		set_conststring_prop("active-firmware", "recovery");
+		err |= set_conststring_prop("active-firmware", "recovery");
 	case 1:
-		set_conststring_prop("active-firmware", "A");
+		err |= set_conststring_prop("active-firmware", "A");
 	case 2:
-		set_conststring_prop("active-firmware", "B");
+		err |= set_conststring_prop("active-firmware", "B");
 	}
 
 	switch (cdata->binf[2]) {
 	case 0:
-		set_conststring_prop("active-ec-firmware", "RO");
+		err |= set_conststring_prop("active-ec-firmware", "RO");
 	case 1:
-		set_conststring_prop("active-ec-firmware", "RW");
+		err |= set_conststring_prop("active-ec-firmware", "RW");
 	}
 
 	switch (cdata->binf[3]) {
 	case 0:
-		set_conststring_prop("firmware-type", "recovery");
+		err |= set_conststring_prop("firmware-type", "recovery");
 	case 1:
-		set_conststring_prop("firmware-type", "normal");
+		err |= set_conststring_prop("firmware-type", "normal");
 	case 2:
-		set_conststring_prop("firmware-type", "developer");
+		err |= set_conststring_prop("firmware-type", "developer");
 	}
-	set_scalar_prop("recovery-reason", binf[4]);
+	err |= set_scalar_prop("recovery-reason", binf[4]);
 
-	set_string_prop("hardware-id", hwid);
-	set_string_prop("firmware-version", fwid);
-	set_string_prop("readonly-firmware-version", frid);
-	set_scalar_prop("fmap-offset", fmap_base);
-	set_array_prop("vboot-shared-data", vbshared_data);
+	err |= set_string_prop("hardware-id", hwid);
+	err |= set_string_prop("firmware-version", fwid);
+	err |= set_string_prop("readonly-firmware-version", frid);
+	err |= set_scalar_prop("fmap-offset", fmap_base);
+	err |= set_array_prop("vboot-shared-data", vbshared_data);
 
 #undef set_scalar_prop
 #undef set_array_prop
