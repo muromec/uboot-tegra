@@ -34,6 +34,19 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
+/*
+ * Create a saved enviroment with this env variable set to "1" to merge the
+ * saved environment on top of the default environment.  The idea is that your
+ * saved environment would just contain variables that you'd like to override
+ * from the default so that as you update u-boot (w/ potential changes to the
+ * default) you get all the updates.
+ *
+ * This is really most useful when you have a tool like fw_setenv to manage
+ * your saved environment.  Using 'saveenv' to save your environment will saved
+ * the _merged_ environment (AKA it won't unmerge things).
+ */
+#define MERGE_WITH_DEFAULT "merge_with_default"
+
 extern env_t *env_ptr;
 
 extern void env_relocate_spec (void);
@@ -216,7 +229,18 @@ int env_import(const char *buf, int check)
 	}
 
 	if (himport_r(&env_htab, (char *)ep->data, ENV_SIZE, '\0', 0)) {
+		char *merge_val;
+
 		gd->flags |= GD_FLG_ENV_READY;
+		merge_val = getenv(MERGE_WITH_DEFAULT);
+
+		if (merge_val != NULL && merge_val[0] != '0') {
+			set_default_env("");
+			himport_r(&env_htab, (char *)ep->data, ENV_SIZE, '\0',
+				  H_NOCLEAR);
+			hdelete_r(MERGE_WITH_DEFAULT, &env_htab);
+			puts("Merged saved with default environment\n\n");
+		}
 		return 1;
 	}
 
