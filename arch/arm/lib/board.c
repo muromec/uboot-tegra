@@ -49,6 +49,7 @@
 #include <nand.h>
 #include <onenand_uboot.h>
 #include <mmc.h>
+#include <fdt_decode.h>
 
 #ifdef CONFIG_BITBANGMII
 #include <miiphy.h>
