@@ -66,7 +66,7 @@
 			read-only;
 		};
 		ro-fmap@ffc00 {
-			label = "ro-fmap";
+			label = "fmap";
 			reg = <0x000efc00 0x00000400>;
 			read-only;
 			type = "fmap";
