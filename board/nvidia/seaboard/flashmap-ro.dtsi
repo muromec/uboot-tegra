@@ -75,8 +75,8 @@
 		};
 
                 /* ---- Section: Vital-product data (VPD) ---- */
-		ro-vpd@efc00 {
-			label = "ro-vpd";
+		ro-vpd@f0000 {
+			label = "vpd";
 			reg = <0x000f0000 0x00010000>;
 			read-only;
 			type = "wiped";
