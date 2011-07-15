@@ -95,6 +95,7 @@ COBJS-$(CONFIG_ENV_IS_IN_EEPROM) += cmd_eeprom.o
 COBJS-$(CONFIG_CMD_EEPROM) += cmd_eeprom.o
 COBJS-$(CONFIG_CMD_ELF) += cmd_elf.o
 COBJS-$(CONFIG_SYS_HUSH_PARSER) += cmd_exit.o
+COBJS-$(CONFIG_CMD_CBFS) += cmd_cbfs.o
 COBJS-$(CONFIG_CMD_EXT2) += cmd_ext2.o
 COBJS-$(CONFIG_CMD_FAT) += cmd_fat.o
 COBJS-$(CONFIG_CMD_FDC)$(CONFIG_CMD_FDOS) += cmd_fdc.o

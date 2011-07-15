@@ -203,9 +203,9 @@ ifeq ($(CONFIG_OF_EMBED),y)
 LIBS += dts/libdts.o
 endif
 LIBS += arch/$(ARCH)/lib/lib$(ARCH).o
-LIBS += fs/cramfs/libcramfs.o fs/fat/libfat.o fs/fdos/libfdos.o fs/jffs2/libjffs2.o \
-	fs/reiserfs/libreiserfs.o fs/ext2/libext2fs.o fs/yaffs2/libyaffs2.o \
-	fs/ubifs/libubifs.o
+LIBS += fs/cramfs/libcramfs.o fs/fat/libfat.o fs/fdos/libfdos.o \
+	fs/jffs2/libjffs2.o fs/reiserfs/libreiserfs.o fs/ext2/libext2fs.o \
+	fs/yaffs2/libyaffs2.o fs/ubifs/libubifs.o fs/cbfs/libcbfs.o
 LIBS += net/libnet.o
 LIBS += disk/libdisk.o
 LIBS += drivers/bios_emulator/libatibiosemu.o
