@@ -214,17 +214,22 @@ int crossystem_data_embed_into_fdt(crossystem_data_t *cdata, void *fdt,
 	switch (cdata->binf[2]) {
 	case 0:
 		err |= set_conststring_prop("active-ec-firmware", "RO");
+		break;
 	case 1:
 		err |= set_conststring_prop("active-ec-firmware", "RW");
+		break;
 	}
 
 	switch (cdata->binf[3]) {
 	case RECOVERY_TYPE:
 		err |= set_conststring_prop("firmware-type", "recovery");
+		break;
 	case NORMAL_TYPE:
 		err |= set_conststring_prop("firmware-type", "normal");
+		break;
 	case DEVELOPER_TYPE:
 		err |= set_conststring_prop("firmware-type", "developer");
+		break;
 	}
 	err |= set_scalar_prop("recovery-reason", binf[4]);
 
