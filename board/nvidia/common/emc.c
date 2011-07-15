@@ -951,6 +951,69 @@ void aebl_emc_init(void)
 	tegra_set_emc(aebl_emc_tables, ARRAY_SIZE(aebl_emc_tables));
 }
 
+static const struct tegra_emc_table asymptote_emc_tables[] = {
+	{
+		.rate = 0,   /* SDRAM frequency */
+		.regs = {
+			0x00000000,   /* RC */
+			0x00000000,   /* RFC */
+			0x00000000,   /* RAS */
+			0x00000000,   /* RP */
+			0x00000000,   /* R2W */
+			0x00000000,   /* W2R */
+			0x00000000,   /* R2P */
+			0x00000000,   /* W2P */
+			0x00000000,   /* RD_RCD */
+			0x00000000,   /* WR_RCD */
+			0x00000000,   /* RRD */
+			0x00000000,   /* REXT */
+			0x00000000,   /* WDV */
+			0x00000000,   /* QUSE */
+			0x00000000,   /* QRST */
+			0x00000000,   /* QSAFE */
+			0x00000000,   /* RDV */
+			0x00000000,   /* REFRESH */
+			0x00000000,   /* BURST_REFRESH_NUM */
+			0x00000000,   /* PDEX2WR */
+			0x00000000,   /* PDEX2RD */
+			0x00000000,   /* PCHG2PDEN */
+			0x00000000,   /* ACT2PDEN */
+			0x00000000,   /* AR2PDEN */
+			0x00000000,   /* RW2PDEN */
+			0x00000000,   /* TXSR */
+			0x00000000,   /* TCKE */
+			0x00000000,   /* TFAW */
+			0x00000000,   /* TRPAB */
+			0x00000000,   /* TCLKSTABLE */
+			0x00000000,   /* TCLKSTOP */
+			0x00000000,   /* TREFBW */
+			0x00000000,   /* QUSE_EXTRA */
+			0x00000000,   /* FBIO_CFG6 */
+			0x00000000,   /* ODT_WRITE */
+			0x00000000,   /* ODT_READ */
+			0x00000000,   /* FBIO_CFG5 */
+			0x00000000,   /* CFG_DIG_DLL */
+			0x00000000,   /* DLL_XFORM_DQS */
+			0x00000000,   /* DLL_XFORM_QUSE */
+			0x00000000,   /* ZCAL_REF_CNT */
+			0x00000000,   /* ZCAL_WAIT_CNT */
+			0x00000000,   /* AUTO_CAL_INTERVAL */
+			0x00000000,   /* CFG_CLKTRIM_0 */
+			0x00000000,   /* CFG_CLKTRIM_1 */
+			0x00000000,   /* CFG_CLKTRIM_2 */
+		}
+	}
+};
+
+void asymptote_emc_init(void)
+{
+        /* We are without real values right now, do not use this code! This
+         * assert will be removed once the proper values have been inserted
+         * into asymptote_emc_tables */
+        assert(0);
+	tegra_set_emc(asymptote_emc_tables, ARRAY_SIZE(asymptote_emc_tables));
+}
+
 struct emc_init {
 	unsigned int	id;		/* board id */
 	void		(*init)(void);
@@ -977,6 +1040,10 @@ static struct emc_init board_table[] = {
 		.id	= MACH_TYPE_WARIO,
 		.init	= NULL,
 	},
+        {
+                .id     = MACH_TYPE_ASYMPTOTE,
+                .init   = asymptote_emc_init,
+        },
 };
 
 int board_emc_init(void)
