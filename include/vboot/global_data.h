@@ -39,13 +39,19 @@ typedef struct {
 	crossystem_data_t	cdata_blob;
 } vb_global_t;
 
-/* Get vboot global data pointer. */
+/* Gets vboot global data pointer. */
 vb_global_t *get_vboot_global(void);
 
-/* Initialize vboot global data. It also loads the GBB data from SPI. */
+/* Initializes vboot global data. It also loads the GBB data from SPI. */
 int init_vboot_global(vb_global_t *global, firmware_storage_t *file);
 
-/* Check if vboot global data valid or not. */
+/* Checks if vboot global data valid or not. */
 int is_vboot_global_valid(vb_global_t *global);
+
+/* Loads the BMP block in GBB from firmware. */
+int load_bmpblk_in_gbb(vb_global_t *global, firmware_storage_t *file);
+
+/* Loads the recovery key in GBB from firmware. */
+int load_reckey_in_gbb(vb_global_t *global, firmware_storage_t *file);
 
 #endif /* VBOOT_GLOBAL_DATA_H */

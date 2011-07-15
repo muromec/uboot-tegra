@@ -370,6 +370,11 @@ static uint8_t *read_gbb_from_firmware(void)
 		return NULL;
 	}
 
+	if (load_bmpblk_in_gbb(global, &file)) {
+		VbExDebug("Failed to load BMP Block in GBB!\n");
+		return NULL;
+	}
+
 	if (file.close(&file)) {
 		VbExDebug("Failed to close firmware device!\n");
 	}

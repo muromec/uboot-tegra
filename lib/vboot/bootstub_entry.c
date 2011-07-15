@@ -274,6 +274,12 @@ void bootstub_entry(void)
 	/* Handle the VbInit() results */
 	if (iparams.out_flags & VB_INIT_OUT_CLEAR_RAM)
 		clear_ram_not_in_use();
+	if (iparams.out_flags & VB_INIT_OUT_ENABLE_DISPLAY)
+		if (load_bmpblk_in_gbb(global, &file))
+			VbExError(PREFIX "Failed to load BMP Block!\n");
+	if (iparams.out_flags & VB_INIT_OUT_ENABLE_RECOVERY)
+		if (load_reckey_in_gbb(global, &file))
+			VbExError(PREFIX "Failed to load recovery key!\n");
 
 	/* Call VbSelectFirmware() */
 	cparams.caller_context = &cache;
