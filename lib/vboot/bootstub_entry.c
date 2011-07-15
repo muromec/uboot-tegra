@@ -289,11 +289,6 @@ void bootstub_entry(void)
 	if (iparams.out_flags & VB_INIT_OUT_CLEAR_RAM)
 		clear_ram_not_in_use();
 
-	if (iparams.out_flags & VB_INIT_OUT_ENABLE_RECOVERY) {
-		VbExDebug(PREFIX "Boot to recovery mode...\n");
-		main_entry();
-	}
-
 	/* Call VbSelectFirmware() */
 	cparams.caller_context = &cache;
 	prepare_fparams(&file, &cache, &fmap, &fparams);
