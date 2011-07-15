@@ -223,11 +223,11 @@ static int set_fwid_value(vb_global_t *global,
 		break;
 
 	case VB_SELECT_FIRMWARE_RECOVERY:
-		fwid_offset = fmap->readonly.ro_onestop.offset;
+		fwid_offset = fmap->readonly.ro_firmware_image.offset;
 		break;
 
 	case VB_SELECT_FIRMWARE_READONLY:
-		fwid_offset = fmap->readonly.ro_onestop.offset;
+		fwid_offset = fmap->readonly.ro_firmware_image.offset;
 		break;
 
 	default:
