@@ -210,14 +210,6 @@ int crossystem_data_embed_into_fdt(crossystem_data_t *cdata, void *fdt,
 			   gpio_prop, sizeof(gpio_prop));
 
 	err |= set_scalar_prop("boot-reason", binf[0]);
-	switch (cdata->binf[1]) {
-	case RECOVERY_FIRMWARE:
-		err |= set_conststring_prop("active-firmware", "recovery");
-	case REWRITABLE_FIRMWARE_A:
-		err |= set_conststring_prop("active-firmware", "A");
-	case REWRITABLE_FIRMWARE_B:
-		err |= set_conststring_prop("active-firmware", "B");
-	}
 
 	switch (cdata->binf[2]) {
 	case 0:
