@@ -136,7 +136,7 @@ VbError_t VbExDiskGetInfo(VbDiskInfo** infos_ptr, uint32_t* count,
 			if (!(flags & disk_flags))
 				continue;
 
-			if (add_disk_info(&m->block_dev, infos, count)) {
+			if (add_disk_info(d, infos, count)) {
 				/*
 				 * If too many storage devices registered,
 				 * returns as many disk infos as we could
