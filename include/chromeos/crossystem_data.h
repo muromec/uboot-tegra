@@ -28,7 +28,7 @@
 /* the data blob format */
 typedef struct {
 	uint32_t	total_size;
-	uint8_t		signature[10];
+	char		signature[10];
 	uint16_t	version;
 	uint64_t	nvcxt_lba;
 	uint16_t	vbnv[2];
@@ -36,22 +36,20 @@ typedef struct {
 	uint8_t		write_protect_sw;
 	uint8_t		recovery_sw;
 	uint8_t		developer_sw;
-	uint32_t	gpio_port_write_protect_sw;
-	uint32_t	gpio_port_recovery_sw;
-	uint32_t	gpio_port_developer_sw;
+	int		gpio_port_write_protect_sw;
+	int		gpio_port_recovery_sw;
+	int		gpio_port_developer_sw;
 	uint8_t		polarity_write_protect_sw;
 	uint8_t		polarity_recovery_sw;
 	uint8_t		polarity_developer_sw;
 	uint8_t		binf[5];
 	uint32_t	chsw;
-	uint8_t 	hwid[ID_LEN];
-	uint8_t		fwid[ID_LEN];
-	uint8_t		frid[ID_LEN];
+	char 		hwid[ID_LEN];
+	char		fwid[ID_LEN];
+	char		frid[ID_LEN];
 	uint32_t	fmap_base;
 	uint8_t		vbshared_data[VB_SHARED_DATA_REC_SIZE];
-} __attribute__((packed)) crossystem_data_t;
-
-int crossystem_data_check_integrity(crossystem_data_t *cdata);
+} crossystem_data_t;
 
 /**
  * This initializes the data blob that we will pass to kernel, and later be

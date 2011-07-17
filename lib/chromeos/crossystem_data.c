@@ -17,8 +17,6 @@
 #include <chromeos/vboot_nvstorage_helper.h> /* for NVCONTEXT_LBA */
 #include <linux/string.h>
 
-#define SIGNATURE "CHROMEOS"
-
 /* This is used to keep u-boot and kernel in sync */
 #define SHARED_MEM_VERSION 1
 
@@ -29,15 +27,6 @@ enum {
 	CHSW_DEVELOPER_MODE_ENABLED	= 0x020,
 	CHSW_WRITE_PROTECT_DISABLED	= 0x200
 };
-
-int crossystem_data_check_integrity(crossystem_data_t *cdata)
-{
-	if (memcmp(cdata->signature, SIGNATURE, strlen(SIGNATURE)))
-		return -1;
-	if (cdata->version != SHARED_MEM_VERSION)
-		return -1;
-	return 0;
-}
 
 int crossystem_data_init(crossystem_data_t *cdata, char *frid,
 		uint32_t fmap_data, void *gbb_data, void *nvcxt_raw,
@@ -51,11 +40,8 @@ int crossystem_data_init(crossystem_data_t *cdata, char *frid,
 
 	cdata->total_size = sizeof(*cdata);
 
-	memcpy(cdata->signature, SIGNATURE, strlen(SIGNATURE));
+	strcpy(cdata->signature, "CHROMEOS");
 	cdata->version = SHARED_MEM_VERSION;
-
-	VBDEBUG(PREFIX "signature : %s\n", cdata->signature);
-	VBDEBUG(PREFIX "version   : %d\n", cdata->version);
 
 	if (recsw->value)
 		cdata->chsw |= CHSW_RECOVERY_BUTTON_PRESSED;
@@ -64,8 +50,8 @@ int crossystem_data_init(crossystem_data_t *cdata, char *frid,
 	if (!wpsw->value)
 		cdata->chsw |= CHSW_WRITE_PROTECT_DISABLED;
 
-	memcpy(cdata->frid, frid, ID_LEN);
-	memcpy(cdata->hwid, gbb_data + gbbh->hwid_offset, gbbh->hwid_size);
+	strncpy(cdata->frid, frid, ID_LEN);
+	strncpy(cdata->hwid, gbb_data + gbbh->hwid_offset, gbbh->hwid_size);
 
 	/* boot reason; always 0 */
 	cdata->binf[0] = 0;
@@ -100,7 +86,7 @@ int crossystem_data_init(crossystem_data_t *cdata, char *frid,
 
 int crossystem_data_set_fwid(crossystem_data_t *cdata, char *fwid)
 {
-	memcpy(cdata->fwid, fwid, ID_LEN);
+	strncpy(cdata->fwid, fwid, ID_LEN);
 	return 0;
 }
 
@@ -176,6 +162,8 @@ int crossystem_data_embed_into_fdt(crossystem_data_t *cdata, void *fdt,
 	fdt_setprop_cell(fdt, nodeoffset, name, cdata->f)
 #define set_array_prop(name, f) \
 	fdt_setprop(fdt, nodeoffset, name, cdata->f, sizeof(cdata->f))
+#define set_string_prop(name, f) \
+	fdt_setprop_string(fdt, nodeoffset, name, cdata->f)
 #define set_conststring_prop(name, str) \
 	fdt_setprop_string(fdt, nodeoffset, name, str)
 #define set_bool_prop(name, f) \
@@ -183,7 +171,7 @@ int crossystem_data_embed_into_fdt(crossystem_data_t *cdata, void *fdt,
 
 	err = 0;
 	err |= set_scalar_prop("total-size", total_size);
-	err |= set_array_prop("signature", signature);
+	err |= set_string_prop("signature", signature);
 	err |= set_scalar_prop("version", version);
 	err |= set_scalar_prop("nonvolatile-context-lba", nvcxt_lba);
 	err |= set_scalar_prop("nonvolatile-context-offset", vbnv[0]);
@@ -233,9 +221,9 @@ int crossystem_data_embed_into_fdt(crossystem_data_t *cdata, void *fdt,
 	}
 	err |= set_scalar_prop("recovery-reason", binf[4]);
 
-	err |= set_array_prop("hardware-id", hwid);
-	err |= set_array_prop("firmware-version", fwid);
-	err |= set_array_prop("readonly-firmware-version", frid);
+	err |= set_string_prop("hardware-id", hwid);
+	err |= set_string_prop("firmware-version", fwid);
+	err |= set_string_prop("readonly-firmware-version", frid);
 	err |= set_scalar_prop("fmap-offset", fmap_base);
 	err |= set_array_prop("vboot-shared-data", vbshared_data);
 
