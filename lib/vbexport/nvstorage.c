@@ -9,6 +9,7 @@
  */
 
 #include <common.h>
+#include <chromeos/common.h>
 
 /* Import the header files from vboot_reference. */
 #include <vboot_api.h>
@@ -39,7 +40,7 @@ static int get_internal_disk(VbDiskInfo **disk_ptr)
 
 		if (VbExDiskGetInfo(&disk_info, &disk_count,
 				VB_DISK_FLAG_FIXED) || disk_count == 0) {
-			VbExDebug(PREFIX "No internal disk found!\n");
+			VBDEBUG(PREFIX "No internal disk found!\n");
 			return 1;
 		}
 		internal_disk = disk_info[0];
@@ -63,7 +64,7 @@ static int get_nvcxt_block_of_disk(const VbDiskInfo *disk,
 	block_buf = VbExMalloc(disk->bytes_per_lba);
 
 	if (VbExDiskRead(disk->handle, NVCXT_LBA, 1, block_buf)) {
-		VbExDebug(PREFIX "Failed to read internal disk!\n");
+		VBDEBUG(PREFIX "Failed to read internal disk!\n");
 		VbExFree(block_buf);
 		return 1;
 	}
@@ -103,7 +104,7 @@ VbError_t VbExNvStorageWrite(const uint8_t* buf)
 	memcpy(block_buf, buf, VBNV_BLOCK_SIZE);
 
 	if (VbExDiskWrite(internal_disk->handle, NVCXT_LBA, 1, block_buf)) {
-		VbExDebug(PREFIX "Failed to write internal disk!\n");
+		VBDEBUG(PREFIX "Failed to write internal disk!\n");
 		VbExFree(block_buf);
 		return 1;
 	}

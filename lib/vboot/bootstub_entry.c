@@ -9,6 +9,7 @@
  */
 
 #include <common.h>
+#include <chromeos/common.h>
 #include <chromeos/crossystem_data.h>
 #include <chromeos/fdt_decode.h>
 #include <chromeos/firmware_storage.h>
@@ -54,7 +55,7 @@ static int read_verification_block(firmware_storage_t *file,
 
 	/* read key block header */
 	if (file->read(file, vblock_offset, sizeof(kbh), &kbh)) {
-		VbExDebug(PREFIX "Failed to read key block!\n");
+		VBDEBUG(PREFIX "Failed to read key block!\n");
 		return -1;
 	}
 	key_block_size = kbh.key_block_size;
@@ -62,7 +63,7 @@ static int read_verification_block(firmware_storage_t *file,
 	/* read firmware preamble header */
 	if (file->read(file, vblock_offset + key_block_size,
 				sizeof(fph), &fph)) {
-		VbExDebug(PREFIX "Failed to read preamble!\n");
+		VBDEBUG(PREFIX "Failed to read preamble!\n");
 		return -1;
 	}
 	vblock_size = key_block_size + fph.preamble_size;
@@ -70,7 +71,7 @@ static int read_verification_block(firmware_storage_t *file,
 	vblock = VbExMalloc(vblock_size);
 
 	if (file->read(file, vblock_offset, vblock_size, vblock)) {
-		VbExDebug(PREFIX "Failed to read verification block!\n");
+		VBDEBUG(PREFIX "Failed to read verification block!\n");
 		VbExFree(vblock);
 		return -1;
 	}
@@ -130,7 +131,7 @@ typedef void (*firmware_entry_t)(void);
 
 static void jump_to_firmware(firmware_entry_t firmware_entry)
 {
-	VbExDebug(PREFIX "Jump to firmware %p...\n", firmware_entry);
+	VBDEBUG(PREFIX "Jump to firmware %p...\n", firmware_entry);
 
 	cleanup_before_linux();
 
@@ -144,22 +145,22 @@ static VbError_t call_VbInit(VbCommonParams *cparams, VbInitParams *iparams)
 {
 	VbError_t ret;
 
-	VbExDebug("VbCommonParams:\n");
-	VbExDebug("    gbb_data         : 0x%lx\n", cparams->gbb_data);
-	VbExDebug("    gbb_size         : %lu\n", cparams->gbb_size);
-	VbExDebug("    shared_data_blob : 0x%lx\n", cparams->shared_data_blob);
-	VbExDebug("    shared_data_size : %lu\n", cparams->shared_data_size);
-	VbExDebug("    caller_context   : 0x%lx\n", cparams->caller_context);
-	VbExDebug("VbInitParams:\n");
-	VbExDebug("    flags         : 0x%lx\n", iparams->flags);
-	VbExDebug("Calling VbInit()...\n");
+	VBDEBUG("VbCommonParams:\n");
+	VBDEBUG("    gbb_data         : 0x%lx\n", cparams->gbb_data);
+	VBDEBUG("    gbb_size         : %lu\n", cparams->gbb_size);
+	VBDEBUG("    shared_data_blob : 0x%lx\n", cparams->shared_data_blob);
+	VBDEBUG("    shared_data_size : %lu\n", cparams->shared_data_size);
+	VBDEBUG("    caller_context   : 0x%lx\n", cparams->caller_context);
+	VBDEBUG("VbInitParams:\n");
+	VBDEBUG("    flags         : 0x%lx\n", iparams->flags);
+	VBDEBUG("Calling VbInit()...\n");
 
 	ret = VbInit(cparams, iparams);
-	VbExDebug("Returned 0x%lu\n", ret);
+	VBDEBUG("Returned 0x%lu\n", ret);
 
 	if (!ret) {
-		VbExDebug("VbInitParams:\n");
-		VbExDebug("    out_flags     : 0x%lx\n", iparams->out_flags);
+		VBDEBUG("VbInitParams:\n");
+		VBDEBUG("    out_flags     : 0x%lx\n", iparams->out_flags);
 	}
 
 	return ret;
@@ -170,30 +171,30 @@ static VbError_t call_VbSelectFirmware(VbCommonParams *cparams,
 {
 	VbError_t ret;
 
-	VbExDebug("VbCommonParams:\n");
-	VbExDebug("    gbb_data         : 0x%lx\n", cparams->gbb_data);
-	VbExDebug("    gbb_size         : %lu\n", cparams->gbb_size);
-	VbExDebug("    shared_data_blob : 0x%lx\n", cparams->shared_data_blob);
-	VbExDebug("    shared_data_size : %lu\n", cparams->shared_data_size);
-	VbExDebug("    caller_context   : 0x%lx\n", cparams->caller_context);
+	VBDEBUG("VbCommonParams:\n");
+	VBDEBUG("    gbb_data         : 0x%lx\n", cparams->gbb_data);
+	VBDEBUG("    gbb_size         : %lu\n", cparams->gbb_size);
+	VBDEBUG("    shared_data_blob : 0x%lx\n", cparams->shared_data_blob);
+	VBDEBUG("    shared_data_size : %lu\n", cparams->shared_data_size);
+	VBDEBUG("    caller_context   : 0x%lx\n", cparams->caller_context);
 
-	VbExDebug("VbSelectFirmwareParams:\n");
-	VbExDebug("    verification_block_A : 0x%lx\n",
+	VBDEBUG("VbSelectFirmwareParams:\n");
+	VBDEBUG("    verification_block_A : 0x%lx\n",
 			fparams->verification_block_A);
-	VbExDebug("    verification_block_B : 0x%lx\n",
+	VBDEBUG("    verification_block_B : 0x%lx\n",
 			fparams->verification_block_B);
-	VbExDebug("    verification_size_A  : %lu\n",
+	VBDEBUG("    verification_size_A  : %lu\n",
 			fparams->verification_size_A);
-	VbExDebug("    verification_size_B  : %lu\n",
+	VBDEBUG("    verification_size_B  : %lu\n",
 			fparams->verification_size_B);
-	VbExDebug("Calling VbSelectFirmware()...\n");
+	VBDEBUG("Calling VbSelectFirmware()...\n");
 
 	ret = VbSelectFirmware(cparams, fparams);
-	VbExDebug("Returned 0x%lu\n", ret);
+	VBDEBUG("Returned 0x%lu\n", ret);
 
 	if (!ret) {
-		VbExDebug("VbSelectFirmwareParams:\n");
-		VbExDebug("    selected_firmware    : %lu\n",
+		VBDEBUG("VbSelectFirmwareParams:\n");
+		VBDEBUG("    selected_firmware    : %lu\n",
 				fparams->selected_firmware);
 	}
 
@@ -231,11 +232,11 @@ static int set_fwid_value(vb_global_t *global,
 	}
 
 	if (file->read(file, fwid_offset, ID_LEN, fwid)) {
-		VbExDebug(PREFIX "Failed to read FWID!\n");
+		VBDEBUG(PREFIX "Failed to read FWID!\n");
 		return 1;
 	}
 
-	VbExDebug(PREFIX "Set FWID as %s\n", fwid);
+	VBDEBUG(PREFIX "Set FWID as %s\n", fwid);
 	crossystem_data_set_fwid(cdata, fwid);
 
 	return 0;
@@ -310,12 +311,12 @@ void bootstub_entry(void)
 		break;
 
 	case VB_SELECT_FIRMWARE_RECOVERY:
-		VbExDebug(PREFIX "Boot to recovery mode...\n");
+		VBDEBUG(PREFIX "Boot to recovery mode...\n");
 		main_entry();
 		break;
 
 	case VB_SELECT_FIRMWARE_READONLY:
-		VbExDebug(PREFIX "Boot to RO firmware...\n");
+		VBDEBUG(PREFIX "Boot to RO firmware...\n");
 		main_entry();
 		break;
 

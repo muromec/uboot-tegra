@@ -15,6 +15,7 @@
 
 #include <common.h>
 #include <malloc.h>
+#include <chromeos/common.h>
 #include <chromeos/power_management.h>
 
 /* Import the definition of vboot_wrapper interfaces. */
@@ -91,5 +92,5 @@ void VbExBeep(uint32_t msec, uint32_t frequency)
 {
 	/* TODO Implement it later. */
 	VbExSleepMs(msec);
-	VbExDebug("Beep!\n");
+	VBDEBUG("Beep!\n");
 }

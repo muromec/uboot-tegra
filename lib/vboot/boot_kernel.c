@@ -10,6 +10,7 @@
 
 #include <common.h>
 #include <part.h>
+#include <chromeos/common.h>
 #include <chromeos/cmdline_updater.h>
 #include <chromeos/crossystem_data.h>
 #include <chromeos/preboot_fdt_update.h>
@@ -82,7 +83,7 @@ int boot_kernel(VbSelectAndLoadKernelParams *kparams, crossystem_data_t *cdata)
 		strncat(cmdline_buf, cmdline, EXTRA_BUFFER - 1);
 	}
 
-	VbExDebug(PREFIX "cmdline before update: %s\n", cmdline_buf);
+	VBDEBUG(PREFIX "cmdline before update: %s\n", cmdline_buf);
 
 	update_cmdline(cmdline_buf,
 			get_dev_num(kparams->disk_handle),
@@ -91,13 +92,13 @@ int boot_kernel(VbSelectAndLoadKernelParams *kparams, crossystem_data_t *cdata)
 			cmdline_out);
 
 	setenv("bootargs", cmdline_out);
-	VbExDebug(PREFIX "cmdline after update: %s\n", getenv("bootargs"));
+	VBDEBUG(PREFIX "cmdline after update: %s\n", getenv("bootargs"));
 
 	set_crossystem_data(cdata);
 
 	sprintf(load_address, "0x%p", kparams->kernel_buffer);
 	do_bootm(NULL, 0, sizeof(argv)/sizeof(*argv), argv);
 
-	VbExDebug(PREFIX "Failed to boot; is kernel broken?\n");
+	VBDEBUG(PREFIX "Failed to boot; is kernel broken?\n");
 	return LOAD_KERNEL_INVALID;
 }

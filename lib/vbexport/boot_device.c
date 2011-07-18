@@ -12,6 +12,7 @@
 #include <mmc.h>
 #include <part.h>
 #include <usb.h>
+#include <chromeos/common.h>
 #include <linux/list.h>
 
 /* Import the header files from vboot_reference. */
@@ -67,7 +68,7 @@ static int add_disk_info(const block_dev_desc_t *dev, VbDiskInfo *infos,
 		uint32_t *count_ptr)
 {
 	if (*count_ptr >= MAX_DISK_INFO) {
-		VbExDebug(PREFIX "Too many storage devices "
+		VBDEBUG(PREFIX "Too many storage devices "
 				 "registered, > %d.\n", MAX_DISK_INFO);
 		return 1;
 	}
@@ -114,7 +115,7 @@ VbError_t VbExDiskGetInfo(VbDiskInfo** infos_ptr, uint32_t* count_ptr,
 
 		/* Skip this entry if it is unable to initialize. */
 		if (mmc_init(m)) {
-			VbExDebug(PREFIX "Unable to init MMC dev %d.\n", i);
+			VBDEBUG(PREFIX "Unable to init MMC dev %d.\n", i);
 			continue;
 		}
 

@@ -11,6 +11,7 @@
 #include <common.h>
 #include <fdt_decode.h>
 #include <lcd.h>
+#include <chromeos/common.h>
 #include <lzma/LzmaTypes.h>
 #include <lzma/LzmaDec.h>
 #include <lzma/LzmaTools.h>
@@ -32,7 +33,7 @@ VbError_t VbExDisplayInit(uint32_t *width, uint32_t *height)
 
 	/* Get LCD details from FDT */
 	if (fdt_decode_lcd(gd->blob, &config)) {
-		VbExDebug("No LCD information in device tree.\n");
+		VBDEBUG("No LCD information in device tree.\n");
 		return 1;
 	}
 
@@ -105,7 +106,7 @@ VbError_t VbExDisplayScreen(uint32_t screen_type)
 			print_on_center("insert image invalid");
 			break;
 		default:
-			VbExDebug("Not a valid screen type: 0x%lx.\n",
+			VBDEBUG("Not a valid screen type: 0x%lx.\n",
 					screen_type);
 			return 1;
 	}
@@ -143,13 +144,13 @@ VbError_t VbExDisplayImage(uint32_t x, uint32_t y, const ImageInfo *info,
 				(SizeT)info->compressed_size,
 				(SizeT)info->original_size);
 		if (!raw_data) {
-			VbExDebug("LZMA decompress failed.\n");
+			VBDEBUG("LZMA decompress failed.\n");
 			return 1;
 		}
 		break;
 
 	default:
-		VbExDebug("Unsupported compression format: %lu\n",
+		VBDEBUG("Unsupported compression format: %lu\n",
 				info->compression);
 		return 1;
 	}
@@ -160,7 +161,7 @@ VbError_t VbExDisplayImage(uint32_t x, uint32_t y, const ImageInfo *info,
 		VbExFree(raw_data);
 
 	if (ret) {
-		VbExDebug("LCD display error.\n");
+		VBDEBUG("LCD display error.\n");
 		return 1;
 	}
 

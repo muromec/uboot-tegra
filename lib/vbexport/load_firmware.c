@@ -9,6 +9,7 @@
  */
 
 #include <common.h>
+#include <chromeos/common.h>
 #include <chromeos/firmware_storage.h>
 #include <vboot/firmware_cache.h>
 
@@ -35,7 +36,7 @@ VbError_t VbExHashFirmwareBody(VbCommonParams* cparams,
 
 	if (firmware_index != VB_SELECT_FIRMWARE_A &&
 			firmware_index != VB_SELECT_FIRMWARE_B) {
-		VbExDebug(PREFIX "Incorrect firmware index: %lu\n",
+		VBDEBUG(PREFIX "Incorrect firmware index: %lu\n",
 				firmware_index);
 		return 1;
 	}
@@ -53,7 +54,7 @@ VbError_t VbExHashFirmwareBody(VbCommonParams* cparams,
 			leftover -= n, offset += n, buffer += n) {
 		n = min(BLOCK_SIZE, leftover);
 		if (file->read(file, offset, n, buffer)) {
-			VbExDebug(PREFIX "an error has occured "
+			VBDEBUG(PREFIX "an error has occured "
 					"while reading firmware");
 			return 1;
 		}
