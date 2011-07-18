@@ -28,12 +28,13 @@
 #define VBGLOBAL_SIGNATURE	"VBGLOBAL"
 #define VBGLOBAL_SIGNATURE_SIZE	8
 #define VBGLOBAL_VERSION	1
+#define GBB_MAX_LENGTH		0x20000
 
 typedef struct {
 	uint8_t			signature[VBGLOBAL_SIGNATURE_SIZE];
 	uint32_t		version;
 	uint32_t		gbb_size;
-	uint8_t			gbb_data[CONFIG_LENGTH_GBB];
+	uint8_t			gbb_data[GBB_MAX_LENGTH];
 	uint32_t		cdata_size;
 	crossystem_data_t	cdata_blob;
 } vb_global_t;

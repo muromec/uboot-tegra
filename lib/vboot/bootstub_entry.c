@@ -90,16 +90,14 @@ static void prepare_fparams(firmware_storage_t *file,
 	uint32_t fw_main_a_size, fw_main_b_size;
 
 	if (read_verification_block(file,
-			fmap->readwrite_a.rw_a_onestop.offset +
-				fmap->onestop_layout.vblock.offset,
+			fmap->readwrite_a.vblock.offset,
 			&fparams->verification_block_A,
 			&fparams->verification_size_A,
 			&fw_main_a_size))
 		VbExError(PREFIX "Failed to read verification block A!\n");
 
 	if (read_verification_block(file,
-			fmap->readwrite_b.rw_b_onestop.offset +
-				fmap->onestop_layout.vblock.offset,
+			fmap->readwrite_b.vblock.offset,
 			&fparams->verification_block_B,
 			&fparams->verification_size_B,
 			&fw_main_b_size))
@@ -108,11 +106,9 @@ static void prepare_fparams(firmware_storage_t *file,
 	/* Prepare the firmware cache which is passed as caller_context. */
 	init_firmware_cache(cache,
 			file,
-			fmap->readwrite_a.rw_a_onestop.offset +
-				fmap->onestop_layout.fwbody.offset,
+			fmap->readwrite_a.boot.offset,
 			fw_main_a_size,
-			fmap->readwrite_b.rw_b_onestop.offset +
-				fmap->onestop_layout.fwbody.offset,
+			fmap->readwrite_b.boot.offset,
 			fw_main_b_size);
 }
 
@@ -215,36 +211,26 @@ static int set_fwid_value(vb_global_t *global,
 
 	switch (selected_firmware) {
 	case VB_SELECT_FIRMWARE_A:
-		fwid_offset = fmap->readwrite_a.rw_a_onestop.offset;
+		fwid_offset = fmap->readwrite_a.firmware_id.offset;
 		break;
 
 	case VB_SELECT_FIRMWARE_B:
-		fwid_offset = fmap->readwrite_b.rw_b_onestop.offset;
+		fwid_offset = fmap->readwrite_b.firmware_id.offset;
 		break;
 
 	case VB_SELECT_FIRMWARE_RECOVERY:
-		fwid_offset = fmap->readonly.ro_firmware_image.offset;
+		fwid_offset = fmap->readonly.firmware_id.offset;
 		break;
 
 	case VB_SELECT_FIRMWARE_READONLY:
-		fwid_offset = fmap->readonly.ro_firmware_image.offset;
+		fwid_offset = fmap->readonly.firmware_id.offset;
 		break;
 
 	default:
 		return 1;
 	}
 
-	fwid_offset += fmap->onestop_layout.fwid.offset;
-
-	if (fmap->onestop_layout.fwid.length > ID_LEN) {
-		VbExDebug(PREFIX "The FWID size declared in FDT is too big!\n");
-		return 1;
-	}
-
-	if (file->read(file,
-			fwid_offset,
-			fmap->onestop_layout.fwid.length,
-			fwid)) {
+	if (file->read(file, fwid_offset, ID_LEN, fwid)) {
 		VbExDebug(PREFIX "Failed to read FWID!\n");
 		return 1;
 	}

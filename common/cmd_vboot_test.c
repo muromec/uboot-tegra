@@ -17,9 +17,12 @@
 #include <chromeos/firmware_storage.h>
 #include <vboot_api.h>
 
-/* We test the regions of GBB. */
-#define TEST_FW_START	CONFIG_OFFSET_GBB
-#define TEST_FW_LENGTH	CONFIG_LENGTH_GBB
+/*
+ * TODO: Pick a better region for test instead of GBB.
+ * We now test the region of GBB.
+ */
+#define TEST_FW_START	0xbfc00
+#define TEST_FW_LENGTH	0x1000
 
 static int do_vboot_test_fwrw(cmd_tbl_t *cmdtp,
 		int flag, int argc, char * const argv[])

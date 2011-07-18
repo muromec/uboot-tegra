@@ -52,7 +52,7 @@ int init_vboot_global(vb_global_t *global, firmware_storage_t *file)
 	}
 
 	/* Load GBB from SPI */
-	if (fmap.readonly.gbb.length > CONFIG_LENGTH_GBB) {
+	if (fmap.readonly.gbb.length > GBB_MAX_LENGTH) {
 		VbExDebug(PREFIX "The GBB size declared in FDT is too big!\n");
 		return 1;
 	}
@@ -65,13 +65,13 @@ int init_vboot_global(vb_global_t *global, firmware_storage_t *file)
 		return 1;
 	}
 
-	if (fmap.onestop_layout.fwid.length > ID_LEN) {
+	if (fmap.readonly.firmware_id.length > ID_LEN) {
 		VbExDebug(PREFIX "The FWID size declared in FDT is too big!\n");
 		return 1;
 	}
 	if (file->read(file,
-			fmap.onestop_layout.fwid.offset,
-			fmap.onestop_layout.fwid.length,
+			fmap.readonly.firmware_id.offset,
+			fmap.readonly.firmware_id.length,
 			frid)) {
 		VbExDebug(PREFIX "Failed to read frid!\n");
 		return 1;
