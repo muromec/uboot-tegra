@@ -80,10 +80,6 @@
 		};
 
 		/* ---- Section: Rewritable VPD 32 KB ---- */
-		rw-vpd-section@1f0000 {
-			label = "rw-vpd-section";
-			reg = <0x001f0000 0x00008000>;
-		};
 		rw-vpd@1f0000 {
 			label = "rw-vpd";
 			reg = <0x001f0000 0x00008000>;
