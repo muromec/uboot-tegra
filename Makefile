@@ -196,9 +196,6 @@ endif
 ifeq ($(CPU),ixp)
 LIBS += arch/arm/cpu/ixp/npe/libnpe.o
 endif
-ifdef DEV_TREE_SEPARATE
-ALL += $(obj)u-boot.dtb
-endif
 ifeq ($(CONFIG_OF_EMBED),y)
 LIBS += dts/libdts.o
 endif
