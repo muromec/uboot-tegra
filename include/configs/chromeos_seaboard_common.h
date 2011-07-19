@@ -36,7 +36,4 @@
 
 #define CONFIG_OF_UPDATE_FDT_BEFORE_BOOT
 
-/* load bootcmd from fdt */
-#undef CONFIG_BOOTCOMMAND
-
 #endif /* __configs_chromeos_seaboard_common_h__ */

@@ -179,16 +179,6 @@
 #define CONFIG_SERVERIP		10.0.0.1
 #define CONFIG_BOOTFILE		vmlinux.uimg
 
-/*
- * We decorate the nfsroot name so that multiple users / boards can easily
- * share an NFS server:
- *   user - username, e.g. 'frank'
- *   board - board, e.g. 'seaboard'
- *   serial - serial number, e.g. '1234'
- */
-#define CONFIG_ROOTPATH		"/export/nfsroot-${user}-${board}-${serial#}"
-#define CONFIG_TFTPPATH		"/tftpboot/uImage-${user}-${board}-${serial#}"
-
 /* turn on command-line edit/hist/auto */
 #define CONFIG_CMDLINE_EDITING
 #define CONFIG_COMMAND_HISTORY
@@ -205,66 +195,224 @@
 #define TEGRA_LP0_VEC
 #endif
 
-/* Environment information */
-#define CONFIG_EXTRA_ENV_SETTINGS_COMMON \
-	CONFIG_STD_DEVICES_SETTINGS \
-	"console=ttyS0,115200n8\0" \
-	"smpflag=smp\0" \
-	"user=user\0" \
-	"serial#=1\0" \
-	"tftpserverip=172.22.72.144\0" \
-	"nfsserverip=172.22.72.144\0" \
-	"extra_bootargs=\0" \
-	"platform_extras=" TEGRA2_SYSMEM"\0" \
-	"videospec=tegrafb\0" \
-	"lp0_args=" TEGRA_LP0_VEC "\0" \
-	"mmcdev=" TEGRA2_MMC_DEFAULT_DEVICE "\0" \
-	"dev_extras=\0" \
-	\
-	"regen_all="\
-		"setenv common_bootargs console=${console} " \
-		"${lp0_args} video=${videospec} ${platform_extras} " \
-		"${dev_extras} noinitrd; " \
-		"setenv bootargs ${common_bootargs} ${extra_bootargs} " \
-		"${bootdev_bootargs}\0" \
-	"regen_net_bootargs=setenv bootdev_bootargs " \
-		"dev=/dev/nfs4 rw nfsroot=${nfsserverip}:${rootpath} " \
-		"ip=dhcp; " \
-		"run regen_all\0" \
-	\
-	"dhcp_setup=setenv tftppath " CONFIG_TFTPPATH "; " \
-		"setenv rootpath " CONFIG_ROOTPATH "; " \
-		"setenv autoload n; " \
-		"run regen_net_bootargs\0" \
-	"dhcp_boot=run dhcp_setup; " \
-		"bootp; tftpboot ${loadaddr} ${tftpserverip}:${tftppath}; " \
-		"bootm ${loadaddr}\0" \
-	\
-	"mmc_setup=setenv bootdev_bootargs " \
-		"root=/dev/mmcblk${mmcdev}p3 ro rootwait; " \
-		"run regen_all\0" \
-	"mmc_boot=run mmc_setup; " \
-		"mmc rescan ${mmcdev}; " \
-		"ext2load mmc ${mmcdev}:3 ${loadaddr} /boot/${bootfile}; " \
-		"bootm ${loadaddr}\0" \
-	\
-	"usb_setup=setenv bootdev_bootargs root=/dev/sda3 ro rootwait; " \
-		"run regen_all\0" \
-	"usb_boot=run usb_setup; " \
-		"ext2load usb 0:3 ${loadaddr} /boot/${bootfile};" \
-		"bootm ${loadaddr}\0" \
-
-#define CONFIG_BOOTCOMMAND \
-  "usb start; "\
-  "if test ${ethact} != \"\"; then "\
-    "run dhcp_boot ; " \
-  "fi ; " \
-  "run usb_boot ; " \
-  "run mmc_boot ; "
-
 #define CONFIG_LOADADDR		0x408000	/* def. location for kernel */
 #define CONFIG_BOOTDELAY	0		/* -1 to disable auto boot */
 #define CONFIG_ZERO_BOOTDELAY_CHECK
+
+/* Environment information */
+
+/*
+ * Defines the regen_all variable, which is used by other commands
+ * defined in this file.  Usage is to override one or more of the environment
+ * variables and then run regen_all to regenerate the environment.
+ *
+ * Args from other scipts in this file:
+ *   bootdev_bootargs: Filled in by other commands below based on the boot
+ *       device.
+ *
+ * Args:
+ *   linuxconsole - console passed to the kernel
+ *   lp0_args: ?
+ *   videospec: ?
+ *   platform_extras: Platform-specific bootargs.
+ *   dev_extras: Placeholder space for developers to put their own boot args.
+ *   extra_bootargs: Filled in by update_firmware_vars.py script in some cases.
+ */
+#define CONFIG_REGEN_ALL_SETTINGS \
+	"linuxconsole=ttyS0,115200n8\0" \
+	"lp0_args=" TEGRA_LP0_VEC "\0" \
+	"videospec=tegrafb\0" \
+	"platform_extras=" TEGRA2_SYSMEM "\0" \
+	"dev_extras=\0" \
+	"extra_bootargs=\0" \
+	"bootdev_bootargs=\0" \
+	\
+	"regen_all=" \
+		"setenv bootargs " \
+			"console=${linuxconsole} " \
+			"${lp0_args} "\
+			"video=${videospec} " \
+			"${platform_extras} " \
+			"${dev_extras} " \
+			"${extra_bootargs} " \
+			"${bootdev_bootargs}\0"
+
+/*
+ * Defines ext2_boot and run_disk_boot_script.
+ *
+ * The run_disk_boot_script runs a u-boot script on the boot disk.  At the
+ * moment this is used to allow the boot disk to choose a partion to boot from,
+ * but could theoretically be used for more complicated things.
+ *
+ * The ext2_boot script boots from an ext2 device.
+ *
+ * Args from other scipts in this file:
+ *   devtype: The device type we're booting from, like "usb" or "mmc"
+ *   devnum: The device number (depends on devtype).  If we're booting from
+ *       extranal MMC (for instance), this would be 1
+ *   devname: The linux device name that will be assigned, like "sda" or
+ *       mmcblk0p
+ *
+ * Args expected to be set by the u-boot script in /u-boot/boot.scr.uimg:
+ *   rootpart: The root filesystem partion; we default to 3 in case there are
+ *       problems reading the boot script.
+ *   cros_bootfile: The name of the kernel in the root partition; we default to
+ *       "/boot/vmlinux.uimg"
+ *
+ * Other args:
+ *   script_part: The FAT partion we'll look for a boot script in.
+ *   script_img: The name of the u-boot script.
+ *
+ * When we boot from an ext2 device, we will look at partion 12 (0x0c) to find
+ * a u-boot script (as /u-boot/boot.scr.uimg).  That script is expected to
+ * override "rootpart" and "cros_bootfile" as needed to select which partition
+ * to boot from.
+ */
+#define CONFIG_EXT2_BOOT_HELPER_SETTINGS \
+	"rootpart=3\0" \
+	"cros_bootfile=/boot/vmlinux.uimg\0" \
+	\
+	"script_part=c\0" \
+	"script_img=/u-boot/boot.scr.uimg\0" \
+	\
+	"run_disk_boot_script=" \
+		"if fatload ${devtype} ${devnum}:${script_part} " \
+				"${loadaddr} ${script_img}; then " \
+			"source ${loadaddr}; " \
+		"fi\0" \
+	\
+	"ext2_boot=" \
+		"setenv bootdev_bootargs " \
+			"root=/dev/${devname}${rootpart} rootwait ro; " \
+		"run regen_all; " \
+		"if ext2load ${devtype} ${devnum}:${rootpart} " \
+		            "${loadaddr} ${cros_bootfile}; then " \
+			"bootm ${loadaddr};" \
+		"fi\0"
+
+/*
+ * Network-boot related settings.
+ *
+ * At the moment, we support full network root booting (tftp kernel and initial
+ * ramdisk) as well as nfs booting (tftp kernel and point root to NFS).
+ *
+ * Network booting is enabled if you have an ethernet adapter plugged in at boot
+ * and also have set tftpserverip/nfsserverip to something other than 0.0.0.0.
+ * For full network booting you just need tftpserverip.  For full NFS root
+ * you neet to set both.
+ *
+ * We decorate the nfsroot name so that multiple users / boards can easily
+ * share an NFS server:
+ *   user - username, e.g. 'frank'
+ *   board - board, e.g. 'seaboard'
+ *   serial - serial number, e.g. '1234'
+ */
+#define CONFIG_NETBOOT_SETTINGS \
+	"tftpserverip=0.0.0.0\0" \
+	"nfsserverip=0.0.0.0\0" \
+	\
+	"user=user\0" \
+	"serial#=1\0" \
+	\
+	"rootaddr=0x12008000\0" \
+	"initrd_high=0xffffffff\0" \
+	\
+	"regen_nfsroot_bootargs=" \
+		"setenv bootdev_bootargs " \
+			"dev=/dev/nfs4 rw nfsroot=${nfsserverip}:${rootpath} " \
+			"ip=dhcp noinitrd; " \
+		"run regen_all\0" \
+	"regen_initrdroot_bootargs=" \
+		"setenv bootdev_bootargs " \
+			"rw root=/dev/ram0 ramdisk_size=294912; " \
+		"run regen_all\0" \
+	\
+	"tftp_setup=" \
+		"setenv tftpkernelpath " \
+			"/tftpboot/uImage-${user}-${board}-${serial#}; " \
+		"setenv tftprootpath " \
+			"/tftpboot/initrd-${user}-${board}-${serial#}; " \
+		"setenv rootpath " \
+			"/export/nfsroot-${user}-${board}-${serial#}; " \
+		"setenv autoload n\0" \
+	"initrdroot_boot=" \
+		"run tftp_setup; " \
+		"run regen_initrdroot_bootargs; " \
+		"bootp; " \
+		"if tftpboot ${rootaddr} ${tftpserverip}:${tftprootpath} && " \
+		"   tftpboot ${loadaddr} ${tftpserverip}:${tftpkernelpath}; " \
+		"then " \
+			"bootm ${loadaddr} ${rootaddr}; " \
+		"else " \
+			"echo 'ERROR: Could not load root/kernel from TFTP'; " \
+			"exit; " \
+		"fi\0" \
+	"nfsroot_boot=" \
+		"run tftp_setup; " \
+		"run regen_nfsroot_bootargs; " \
+		"bootp; " \
+		"if tftpboot ${loadaddr} ${tftpserverip}:${tftpkernelpath}; " \
+		"then " \
+			"bootm ${loadaddr}; " \
+		"else " \
+			"echo 'ERROR: Could not load kernel from TFTP'; " \
+			"exit; " \
+		"fi\0" \
+	\
+	"net_boot=" \
+		"if test ${ethact} != \"\"; then " \
+			"if test ${tftpserverip} != \"0.0.0.0\"; then " \
+				"run initrdroot_boot; " \
+				"if test ${nfsserverip} != \"0.0.0.0\"; then " \
+					"run nfsroot_boot; " \
+				"fi; " \
+			"fi; " \
+		"fi\0" \
+
+/*
+ * Our full set of extra enviornment variables.
+ *
+ * A few notes:
+ * - Right now, we can only boot from one USB device.  Need to fix this once
+ *   usb works better.
+ * - We define both "normal_boot" and "secure_boot".  The secure_boot command
+ *   is referenced when we override the boot command with the FDT.
+ */
+
+#define CONFIG_EXTRA_ENV_SETTINGS_COMMON \
+	CONFIG_STD_DEVICES_SETTINGS \
+	CONFIG_REGEN_ALL_SETTINGS \
+	CONFIG_EXT2_BOOT_HELPER_SETTINGS\
+	CONFIG_NETBOOT_SETTINGS \
+	\
+	"usb_boot=setenv devtype usb; " \
+		"setenv devnum 0; " \
+		"setenv devname sda; " \
+		"run run_disk_boot_script;" \
+		"run ext2_boot\0" \
+	\
+	"mmc_boot=mmc rescan ${devnum}; " \
+		"setenv devtype mmc; " \
+		"setenv devname mmcblk${devnum}p; " \
+		"run run_disk_boot_script;" \
+		"run ext2_boot\0" \
+	"mmc0_boot=setenv devnum 0; " \
+		"run mmc_boot\0" \
+	"mmc1_boot=setenv devnum 1; " \
+		"run mmc_boot\0" \
+	\
+	"non_verified_boot=" \
+		"usb start; " \
+		"run net_boot; " \
+		"run usb_boot; " \
+		\
+		"run mmc1_boot; " \
+		"run mmc0_boot\0" \
+	"secure_boot=" \
+		"run regen_all; " \
+		"vboot_twostop\0"
+
+#define CONFIG_BOOTCOMMAND "run non_verified_boot"
 
 /*
  * Miscellaneous configurable options
