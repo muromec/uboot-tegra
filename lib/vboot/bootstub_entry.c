@@ -211,20 +211,19 @@ static int set_fwid_value(vb_global_t *global,
 	uint32_t fwid_offset;
 
 	switch (selected_firmware) {
+	case VB_SELECT_FIRMWARE_RECOVERY:
+	case VB_SELECT_FIRMWARE_READONLY:
+		crossystem_data_set_fwid(cdata, (char *)cdata->frid);
+		VBDEBUG(PREFIX "Set FWID as %s (same as RO)\n",
+				(char *)cdata->fwid);
+		return 0;
+
 	case VB_SELECT_FIRMWARE_A:
 		fwid_offset = fmap->readwrite_a.firmware_id.offset;
 		break;
 
 	case VB_SELECT_FIRMWARE_B:
 		fwid_offset = fmap->readwrite_b.firmware_id.offset;
-		break;
-
-	case VB_SELECT_FIRMWARE_RECOVERY:
-		fwid_offset = fmap->readonly.firmware_id.offset;
-		break;
-
-	case VB_SELECT_FIRMWARE_READONLY:
-		fwid_offset = fmap->readonly.firmware_id.offset;
 		break;
 
 	default:
@@ -236,8 +235,8 @@ static int set_fwid_value(vb_global_t *global,
 		return 1;
 	}
 
-	VBDEBUG(PREFIX "Set FWID as %s\n", fwid);
 	crossystem_data_set_fwid(cdata, fwid);
+	VBDEBUG(PREFIX "Set FWID as %s\n", (char *)cdata->fwid);
 
 	return 0;
 }
