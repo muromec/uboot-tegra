@@ -89,21 +89,24 @@ static void init_usb_storage(void)
 		usb_stor_scan(/*mode=*/1);
 }
 
-VbError_t VbExDiskGetInfo(VbDiskInfo** infos_ptr, uint32_t* count,
+VbError_t VbExDiskGetInfo(VbDiskInfo** infos_ptr, uint32_t* count_ptr,
                           uint32_t disk_flags)
 {
 	VbDiskInfo *infos;
+	uint32_t count, flags;
 	struct mmc *m;
 	block_dev_desc_t *d;
 	int i;
 
+	*infos_ptr = NULL;
+	*count_ptr = 0;
+
 	infos = (VbDiskInfo *)VbExMalloc(sizeof(VbDiskInfo) * MAX_DISK_INFO);
-	*infos_ptr = infos;
-	*count = 0;
+	count = 0;
 
 	/* Detect all SD/MMC devices. */
 	for (i = 0; (m = find_mmc_device(i)) != NULL; i++) {
-		uint32_t flags = get_dev_flags(&m->block_dev);
+		flags = get_dev_flags(&m->block_dev);
 
 		/* Skip this entry if the flags are not matched. */
 		if (!(flags & disk_flags))
@@ -115,42 +118,45 @@ VbError_t VbExDiskGetInfo(VbDiskInfo** infos_ptr, uint32_t* count,
 			continue;
 		}
 
-		if (add_disk_info(&m->block_dev, infos, count)) {
+		if (add_disk_info(&m->block_dev, infos, &count)) {
 			/*
 			 * If too many storage devices registered,
 			 * returns as many disk infos as we could
 			 * handle.
 			 */
-			return 1;
+			goto out;
 		}
 	}
 
 	/* To speed up, skip detecting USB if not require removable devices. */
-	if (disk_flags & VB_DISK_FLAG_REMOVABLE) {
-		/* Detect all USB storage devices. */
-		init_usb_storage();
-		for (i = 0; (d = usb_stor_get_dev(i)) != NULL; i++) {
-			uint32_t flags = get_dev_flags(d);
+	if (!(disk_flags & VB_DISK_FLAG_REMOVABLE))
+		goto out;
 
-			/* Skip this entry if the flags are not matched. */
-			if (!(flags & disk_flags))
-				continue;
+	/* Detect all USB storage devices. */
+	init_usb_storage();
+	for (i = 0; (d = usb_stor_get_dev(i)) != NULL; i++) {
+		flags = get_dev_flags(d);
 
-			if (add_disk_info(d, infos, count)) {
-				/*
-				 * If too many storage devices registered,
-				 * returns as many disk infos as we could
-				 * handle.
-				 */
-				return 1;
-			}
+		/* Skip this entry if the flags are not matched. */
+		if (!(flags & disk_flags))
+			continue;
+
+		if (add_disk_info(d, infos, &count)) {
+			/*
+			 * If too many storage devices registered,
+			 * returns as many disk infos as we could
+			 * handle.
+			 */
+			goto out;
 		}
 	}
 
-	if (*count == 0) {
+out:
+	if (count) {
+		*infos_ptr = infos;
+		*count_ptr = count;
+	} else
 		VbExFree(infos);
-		infos = NULL;
-	}
 
 	return VBERROR_SUCCESS;
 }
