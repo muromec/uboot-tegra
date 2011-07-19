@@ -45,7 +45,7 @@ int do_echo(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	}
 
 	if (putnl)
-		putc('\n');
+		puts("\n");
 
 	return 0;
 }

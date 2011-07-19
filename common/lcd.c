@@ -696,7 +696,7 @@ static uchar *draw_encoded_bitmap(uchar *fb, ushort c, int cnt)
 /* Do not call this function directly, must be called from
  * lcd_display_bitmap.
  */
-static int lcd_display_rle8_bitmap(bmp_image_t *bmp, ushort *cmap, uchar *fb,
+static void lcd_display_rle8_bitmap(bmp_image_t *bmp, ushort *cmap, uchar *fb,
 				    int x_off, int y_off)
 {
 	uchar *bmap;
@@ -779,7 +779,6 @@ static int lcd_display_rle8_bitmap(bmp_image_t *bmp, ushort *cmap, uchar *fb,
 			bmap += 2;
 		}
 	}
-	return 0;
 }
 #endif /* CONFIG_LCD_BMP_RLE8 */
 
@@ -928,8 +927,8 @@ int lcd_display_bitmap(ulong bmp_image, int x, int y)
 				printf("Error: only support 16 bpix");
 				return 1;
 			}
-			return lcd_display_rle8_bitmap(bmp, cmap_base, fb,
-						       x, y);
+			lcd_display_rle8_bitmap(bmp, cmap_base, fb, x, y);
+			break;
 		}
 #endif
 
