@@ -43,40 +43,56 @@
 
 		ro-boot@0 {
 			label = "boot-stub";
-			reg = <0x00000000 0x000bfb00>; /* ~785 KB */
+			reg = <0x00000000 0x000bff00>; /* ~768 KB */
 			read-only;
 			type = "blob signed";
 		};
-		ro-firmware-id@bfb00 {
+		ro-recovery@bff00 {
+			/* Deprecated section */
+			label = "recovery";
+			reg = <0x000bff00 0x00000000>;
+			read-only;
+		};
+		ro-firmware-id@bff00 {
 			label = "ro-frid";
-			reg = <0x000bfb00 0x00000100>;
-                        read-only;
-                        type = "blobstring fwid";
-		};
-
-		ro-gbb@bfc00 {
-			label = "gbb";
-			reg = <0x000bfc00 0x00020000>;
+			reg = <0x000bff00 0x00000100>;
 			read-only;
-			type = "blob gbb";
+			type = "blobstring fwid";
 		};
-		ro-data@dfc00 {
-			label = "ro-data";
-			reg = <0x000dfc00 0x00010000>;
-			read-only;
-		};
-		ro-fmap@ffc00 {
+		ro-fmap@c0000 {
 			label = "fmap";
-			reg = <0x000efc00 0x00000400>;
+
+			/* We encourage to align FMAP partition in as large
+			 * block as possible so that flashrom can find it soon.
+			 * For example, aligning to 512KB is better than to
+			 * 256KB. */
+
+			reg = <0x000c0000 0x00001000>;
 			read-only;
 			type = "fmap";
 			ver-major = <1>;
 			ver-minor = <0>;
 		};
+		ro-gbb@c1000 {
+			label = "gbb";
+
+			/* GBB offset must be aligned to 4K bytes */
+			reg = <0x000c1000 0x00020000>;
+			read-only;
+			type = "blob gbb";
+		};
+		ro-data@e1000 {
+		        /* Currently unused, simply for padding */
+			label = "ro-data";
+			reg = <0x000e1000 0x0000f000>;
+			read-only;
+		};
 
                 /* ---- Section: Vital-product data (VPD) ---- */
 		ro-vpd@f0000 {
 			label = "ro-vpd";
+
+			/* VPD offset must be aligned to 4K bytes */
 			reg = <0x000f0000 0x00010000>;
 			read-only;
 			type = "wiped";
