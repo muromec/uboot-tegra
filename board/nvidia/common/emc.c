@@ -951,49 +951,100 @@ void aebl_emc_init(void)
 	tegra_set_emc(aebl_emc_tables, ARRAY_SIZE(aebl_emc_tables));
 }
 
+/* These values are not final, but they do work on the board */
 static const struct tegra_emc_table asymptote_emc_tables[] = {
 	{
-		.rate = 0,   /* SDRAM frequency */
+		.rate = 190000,   /* SDRAM frequency */
 		.regs = {
-			0x00000000,   /* RC */
-			0x00000000,   /* RFC */
-			0x00000000,   /* RAS */
-			0x00000000,   /* RP */
-			0x00000000,   /* R2W */
-			0x00000000,   /* W2R */
-			0x00000000,   /* R2P */
-			0x00000000,   /* W2P */
-			0x00000000,   /* RD_RCD */
-			0x00000000,   /* WR_RCD */
-			0x00000000,   /* RRD */
-			0x00000000,   /* REXT */
-			0x00000000,   /* WDV */
-			0x00000000,   /* QUSE */
-			0x00000000,   /* QRST */
-			0x00000000,   /* QSAFE */
-			0x00000000,   /* RDV */
-			0x00000000,   /* REFRESH */
+			0x0000000c,   /* RC */
+			0x00000026,   /* RFC */
+			0x00000009,   /* RAS */
+			0x00000003,   /* RP */
+			0x00000004,   /* R2W */
+			0x00000004,   /* W2R */
+			0x00000002,   /* R2P */
+			0x0000000c,   /* W2P */
+			0x00000003,   /* RD_RCD */
+			0x00000003,   /* WR_RCD */
+			0x00000002,   /* RRD */
+			0x00000001,   /* REXT */
+			0x00000004,   /* WDV */
+			0x00000005,   /* QUSE */
+			0x00000004,   /* QRST */
+			0x00000009,   /* QSAFE */
+			0x0000000d,   /* RDV */
+			0x0000059f,   /* REFRESH */
 			0x00000000,   /* BURST_REFRESH_NUM */
-			0x00000000,   /* PDEX2WR */
-			0x00000000,   /* PDEX2RD */
-			0x00000000,   /* PCHG2PDEN */
-			0x00000000,   /* ACT2PDEN */
-			0x00000000,   /* AR2PDEN */
-			0x00000000,   /* RW2PDEN */
-			0x00000000,   /* TXSR */
-			0x00000000,   /* TCKE */
-			0x00000000,   /* TFAW */
-			0x00000000,   /* TRPAB */
-			0x00000000,   /* TCLKSTABLE */
-			0x00000000,   /* TCLKSTOP */
+			0x00000003,   /* PDEX2WR */
+			0x00000003,   /* PDEX2RD */
+			0x00000003,   /* PCHG2PDEN */
+			0x00000003,   /* ACT2PDEN */
+			0x00000001,   /* AR2PDEN */
+			0x0000000b,   /* RW2PDEN */
+			0x000000c8,   /* TXSR */
+			0x00000003,   /* TCKE */
+			0x00000007,   /* TFAW */
+			0x00000004,   /* TRPAB */
+			0x0000000f,   /* TCLKSTABLE */
+			0x00000002,   /* TCLKSTOP */
 			0x00000000,   /* TREFBW */
 			0x00000000,   /* QUSE_EXTRA */
-			0x00000000,   /* FBIO_CFG6 */
+			0x00000002,   /* FBIO_CFG6 */
 			0x00000000,   /* ODT_WRITE */
 			0x00000000,   /* ODT_READ */
-			0x00000000,   /* FBIO_CFG5 */
-			0x00000000,   /* CFG_DIG_DLL */
-			0x00000000,   /* DLL_XFORM_DQS */
+			0x00000083,   /* FBIO_CFG5 */
+			0xa06204ae,   /* CFG_DIG_DLL */
+			0x007dc010,   /* DLL_XFORM_DQS */
+			0x00000000,   /* DLL_XFORM_QUSE */
+			0x00000000,   /* ZCAL_REF_CNT */
+			0x00000000,   /* ZCAL_WAIT_CNT */
+			0x00000000,   /* AUTO_CAL_INTERVAL */
+			0x00000000,   /* CFG_CLKTRIM_0 */
+			0x00000000,   /* CFG_CLKTRIM_1 */
+			0x00000000,   /* CFG_CLKTRIM_2 */
+		}
+	}, {
+		.rate = 380000,   /* SDRAM frequency */
+		.regs = {
+			0x00000017,   /* RC */
+			0x0000004b,   /* RFC */
+			0x00000012,   /* RAS */
+			0x00000006,   /* RP */
+			0x00000004,   /* R2W */
+			0x00000005,   /* W2R */
+			0x00000003,   /* R2P */
+			0x0000000c,   /* W2P */
+			0x00000006,   /* RD_RCD */
+			0x00000006,   /* WR_RCD */
+			0x00000003,   /* RRD */
+			0x00000001,   /* REXT */
+			0x00000004,   /* WDV */
+			0x00000005,   /* QUSE */
+			0x00000004,   /* QRST */
+			0x00000009,   /* QSAFE */
+			0x0000000d,   /* RDV */
+			0x00000b5f,   /* REFRESH */
+			0x00000000,   /* BURST_REFRESH_NUM */
+			0x00000003,   /* PDEX2WR */
+			0x00000003,   /* PDEX2RD */
+			0x00000006,   /* PCHG2PDEN */
+			0x00000006,   /* ACT2PDEN */
+			0x00000001,   /* AR2PDEN */
+			0x00000011,   /* RW2PDEN */
+			0x000000c8,   /* TXSR */
+			0x00000003,   /* TCKE */
+			0x0000000e,   /* TFAW */
+			0x00000007,   /* TRPAB */
+			0x0000000f,   /* TCLKSTABLE */
+			0x00000002,   /* TCLKSTOP */
+			0x00000000,   /* TREFBW */
+			0x00000000,   /* QUSE_EXTRA */
+			0x00000002,   /* FBIO_CFG6 */
+			0x00000000,   /* ODT_WRITE */
+			0x00000000,   /* ODT_READ */
+			0x00000083,   /* FBIO_CFG5 */
+			0xe044048b,   /* CFG_DIG_DLL */
+			0x007d8010,   /* DLL_XFORM_DQS */
 			0x00000000,   /* DLL_XFORM_QUSE */
 			0x00000000,   /* ZCAL_REF_CNT */
 			0x00000000,   /* ZCAL_WAIT_CNT */
@@ -1007,10 +1058,6 @@ static const struct tegra_emc_table asymptote_emc_tables[] = {
 
 void asymptote_emc_init(void)
 {
-        /* We are without real values right now, do not use this code! This
-         * assert will be removed once the proper values have been inserted
-         * into asymptote_emc_tables */
-        assert(0);
 	tegra_set_emc(asymptote_emc_tables, ARRAY_SIZE(asymptote_emc_tables));
 }
 
