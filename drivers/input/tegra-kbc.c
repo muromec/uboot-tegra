@@ -179,41 +179,45 @@ static int tegra_kbc_get_single_char(u32 fifo_cnt)
 	char key = 0;
 
 	if (fifo_cnt) {
-		cnt = tegra_kbc_find_keys(fifo);
-		/* If this is a ghost key combination report no change. */
-		key = prev_key;
-		if (cnt <= KBC_MAX_KPENT) {
-			int prev_key_in_fifo = 0;
-			/*
-			 * If multiple keys are pressed such that it results in
-			 * 2 or more unmodified keys, we will determine the
-			 * newest key and report that to the upper layer.
-			 */
-			for (i = 0; i < cnt; i++) {
-				for (j = 0; j < prev_cnt; j++) {
-					if (fifo[i] == prev_fifo[j])
+		do {
+			cnt = tegra_kbc_find_keys(fifo);
+			/* If this is a ghost key combination report no change. */
+			key = prev_key;
+			if (cnt <= KBC_MAX_KPENT) {
+				int prev_key_in_fifo = 0;
+				/*
+				 * If multiple keys are pressed such that it
+				 * results in * 2 or more unmodified keys, we
+				 * will determine the newest key and report
+				 * that to the upper layer.
+				 */
+				for (i = 0; i < cnt; i++) {
+					for (j = 0; j < prev_cnt; j++) {
+						if (fifo[i] == prev_fifo[j])
+							break;
+					}
+					/* Found a new key. */
+					if (j == prev_cnt) {
+						key = fifo[i];
 						break;
+					}
+					if (prev_key == fifo[i])
+						prev_key_in_fifo = 1;
 				}
-				/* Found a new key. */
-				if (j == prev_cnt) {
-					key = fifo[i];
-					break;
-				}
-				if (prev_key == fifo[i])
-					prev_key_in_fifo = 1;
-			}
-			/*
-			 * Keys were released and FIFO does not contain the
-			 * previous reported key. So report a null key.
-			 */
-			if (i == cnt && !prev_key_in_fifo)
-				key = 0;
+				/*
+				 * Keys were released and FIFO does not contain
+				 * the previous reported key. So report a null
+				 * key.
+				 */
+				if (i == cnt && !prev_key_in_fifo)
+					key = 0;
 
-			for (i = 0; i < cnt; i++)
-				prev_fifo[i] = fifo[i];
-			prev_cnt = cnt;
-			prev_key = key;
-		}
+				for (i = 0; i < cnt; i++)
+					prev_fifo[i] = fifo[i];
+				prev_cnt = cnt;
+				prev_key = key;
+			}
+		} while (!key && --fifo_cnt);
 	} else {
 		prev_cnt = 0;
 		prev_key = 0;
