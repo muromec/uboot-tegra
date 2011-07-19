@@ -21,12 +21,9 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
-/* The VBoot Global Data is stored in a region just above the stack region. */
-#define VBGLOBAL_BASE	(CONFIG_STACKBASE + CONFIG_STACKSIZE)
-
 vb_global_t *get_vboot_global(void)
 {
-	return (vb_global_t *)(VBGLOBAL_BASE);
+	return (vb_global_t *)(CONFIG_VBGLOBAL_BASE);
 }
 
 /*

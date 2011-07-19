@@ -12,6 +12,9 @@
 #define CONFIG_CHROMEOS_VBEXPORT
 #define CONFIG_CHROMEOS_VBOOT
 
+/* The VBoot Global Data is stored in a region just above the stack region. */
+#define CONFIG_VBGLOBAL_BASE    (CONFIG_STACKBASE + CONFIG_STACKSIZE)
+
 #define CONFIG_CMD_VBOOT_BOOTSTUB
 #define CONFIG_CMD_VBOOT_MAIN
 
