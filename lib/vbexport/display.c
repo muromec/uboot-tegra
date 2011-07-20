@@ -60,7 +60,7 @@ static void print_on_center(const char *message)
 			strcat(result, ".");
 		strcat(result, "\n");
 	}
-	
+
 	left_space = (PRINT_MAX_COL - strlen(message)) / 2;
 	for (i = 0; i < left_space; i++)
 		strcat(result, ".");
@@ -106,7 +106,7 @@ VbError_t VbExDisplayScreen(uint32_t screen_type)
 			print_on_center("insert image invalid");
 			break;
 		default:
-			VBDEBUG("Not a valid screen type: 0x%lx.\n",
+			VBDEBUG("Not a valid screen type: %08x.\n",
 					screen_type);
 			return 1;
 	}
@@ -150,7 +150,7 @@ VbError_t VbExDisplayImage(uint32_t x, uint32_t y, const ImageInfo *info,
 		break;
 
 	default:
-		VBDEBUG("Unsupported compression format: %lu\n",
+		VBDEBUG("Unsupported compression format: %08x\n",
 				info->compression);
 		return 1;
 	}

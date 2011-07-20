@@ -36,7 +36,7 @@ VbError_t VbExHashFirmwareBody(VbCommonParams* cparams,
 
 	if (firmware_index != VB_SELECT_FIRMWARE_A &&
 			firmware_index != VB_SELECT_FIRMWARE_B) {
-		VBDEBUG(PREFIX "Incorrect firmware index: %lu\n",
+		VBDEBUG(PREFIX "Incorrect firmware index: %08x\n",
 				firmware_index);
 		return 1;
 	}
