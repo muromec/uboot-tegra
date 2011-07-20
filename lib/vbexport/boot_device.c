@@ -55,29 +55,6 @@ static const char *get_dev_name(const block_dev_desc_t *dev)
 	return all_disk_types[dev->if_type];
 }
 
-static void fill_disk_info(const block_dev_desc_t *dev, VbDiskInfo *info_ptr)
-{
-	info_ptr->handle = (VbExDiskHandle_t)dev;
-	info_ptr->bytes_per_lba = dev->blksz;
-	info_ptr->lba_count = dev->lba;
-	info_ptr->flags = get_dev_flags(dev);
-	info_ptr->name = get_dev_name(dev);
-}
-
-static int add_disk_info(const block_dev_desc_t *dev, VbDiskInfo *infos,
-		uint32_t *count_ptr)
-{
-	if (*count_ptr >= MAX_DISK_INFO) {
-		VBDEBUG(PREFIX "Too many storage devices "
-				 "registered, > %d.\n", MAX_DISK_INFO);
-		return 1;
-	}
-
-	fill_disk_info(dev, &infos[*count_ptr]);
-	(*count_ptr)++;
-	return 0;
-}
-
 static void init_usb_storage(void)
 {
 	/*
@@ -90,69 +67,82 @@ static void init_usb_storage(void)
 		usb_stor_scan(/*mode=*/1);
 }
 
+typedef block_dev_desc_t *(device_iterator_func)(int *);
+
+block_dev_desc_t *iterate_mmc_device(int *index_ptr)
+{
+	struct mmc *mmc;
+	int index;
+
+	for (index = *index_ptr; (mmc = find_mmc_device(index)); index++) {
+		/* Skip device that cannot be initialized */
+		if (!mmc_init(mmc))
+			break;
+	}
+
+	/*
+	 * find_mmc_device() returns a pointer from a global linked list. So
+	 * &mmc->block_dev is not a dangling pointer after this function
+	 * is returned.
+	 */
+
+	*index_ptr = index + 1;
+	return mmc ? &mmc->block_dev : NULL;
+}
+
+block_dev_desc_t *iterate_usb_device(int *index_ptr)
+{
+	return usb_stor_get_dev((*index_ptr)++);
+}
+
 VbError_t VbExDiskGetInfo(VbDiskInfo** infos_ptr, uint32_t* count_ptr,
                           uint32_t disk_flags)
 {
+	device_iterator_func *iterators[] = {
+		iterate_mmc_device, iterate_usb_device, NULL
+	};
+	device_iterator_func *iter;
 	VbDiskInfo *infos;
-	uint32_t count, flags;
-	struct mmc *m;
-	block_dev_desc_t *d;
-	int i;
+	block_dev_desc_t *dev;
+	uint32_t count, max_count, flags;
+	int i, func_index;
 
 	*infos_ptr = NULL;
 	*count_ptr = 0;
 
-	infos = (VbDiskInfo *)VbExMalloc(sizeof(VbDiskInfo) * MAX_DISK_INFO);
+	/* We assume there is only one non-removable storage device */
+	max_count = (disk_flags & VB_DISK_FLAG_REMOVABLE) ? MAX_DISK_INFO : 1;
+	infos = (VbDiskInfo *)VbExMalloc(sizeof(VbDiskInfo) * max_count);
 	count = 0;
-
-	/* Detect all SD/MMC devices. */
-	for (i = 0; (m = find_mmc_device(i)) != NULL; i++) {
-		flags = get_dev_flags(&m->block_dev);
-
-		/* Skip this entry if the flags are not matched. */
-		if (!(flags & disk_flags))
-			continue;
-
-		/* Skip this entry if it is unable to initialize. */
-		if (mmc_init(m)) {
-			VBDEBUG(PREFIX "Unable to init MMC dev %d.\n", i);
-			continue;
-		}
-
-		if (add_disk_info(&m->block_dev, infos, &count)) {
-			/*
-			 * If too many storage devices registered,
-			 * returns as many disk infos as we could
-			 * handle.
-			 */
-			goto out;
-		}
-	}
 
 	/* To speed up, skip detecting USB if not require removable devices. */
 	if (!(disk_flags & VB_DISK_FLAG_REMOVABLE))
-		goto out;
+		iterators[1] = NULL;
 
-	/* Detect all USB storage devices. */
-	init_usb_storage();
-	for (i = 0; (d = usb_stor_get_dev(i)) != NULL; i++) {
-		flags = get_dev_flags(d);
+	for (func_index = 0;
+	     count < max_count && (iter = iterators[func_index]);
+	     func_index++) {
+		if (iter == iterate_usb_device)
+			init_usb_storage();
 
-		/* Skip this entry if the flags are not matched. */
-		if (!(flags & disk_flags))
-			continue;
+		/*
+		 * If too many storage devices registered, we return as many
+		 * disk infos as possible.
+		 */
+		for (i = 0; count < max_count && (dev = iter(&i)); count++) {
+			flags = get_dev_flags(dev);
+			/* Skip this entry if the flags are not matched. */
+			if (!(flags & disk_flags))
+				continue;
 
-		if (add_disk_info(d, infos, &count)) {
-			/*
-			 * If too many storage devices registered,
-			 * returns as many disk infos as we could
-			 * handle.
-			 */
-			goto out;
+			infos[count].handle = (VbExDiskHandle_t)dev;
+			infos[count].bytes_per_lba = dev->blksz;
+			infos[count].lba_count = dev->lba;
+			infos[count].flags = flags;
+			infos[count].name = get_dev_name(dev);
 		}
 	}
 
-out:
 	if (count) {
 		*infos_ptr = infos;
 		*count_ptr = count;
