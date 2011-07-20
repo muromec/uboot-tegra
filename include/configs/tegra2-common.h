@@ -201,6 +201,18 @@
 
 /* Environment information */
 
+/* Passed on the kernel command line to specify the console. */
+#define CONFIG_LINUXCONSOLE "console=ttyS0,115200n8"
+
+/*
+ * Defines the standard boot args; these are used in the vboot case (which
+ * doesn't run regen_all) as well as used as part of regen_all.
+ */
+#define CONFIG_BOOTARGS \
+	CONFIG_LINUXCONSOLE " " \
+	TEGRA_LP0_VEC " " \
+	TEGRA2_SYSMEM
+
 /*
  * Defines the regen_all variable, which is used by other commands
  * defined in this file.  Usage is to override one or more of the environment
@@ -211,25 +223,21 @@
  *       device.
  *
  * Args:
- *   linuxconsole - console passed to the kernel
- *   lp0_args: ?
- *   platform_extras: Platform-specific bootargs.
+ *   common_bootargs: A copy of the default bootargs so we can run regen_all
+ *       more than once.
  *   dev_extras: Placeholder space for developers to put their own boot args.
  *   extra_bootargs: Filled in by update_firmware_vars.py script in some cases.
  */
 #define CONFIG_REGEN_ALL_SETTINGS \
-	"linuxconsole=ttyS0,115200n8\0" \
-	"lp0_args=" TEGRA_LP0_VEC "\0" \
-	"platform_extras=" TEGRA2_SYSMEM "\0" \
+	"common_bootargs=" CONFIG_BOOTARGS "\0" \
+	\
 	"dev_extras=\0" \
 	"extra_bootargs=\0" \
 	"bootdev_bootargs=\0" \
 	\
 	"regen_all=" \
 		"setenv bootargs " \
-			"console=${linuxconsole} " \
-			"${lp0_args} "\
-			"${platform_extras} " \
+			"${common_bootargs} " \
 			"${dev_extras} " \
 			"${extra_bootargs} " \
 			"${bootdev_bootargs}\0"
@@ -372,8 +380,10 @@
  * A few notes:
  * - Right now, we can only boot from one USB device.  Need to fix this once
  *   usb works better.
- * - We define both "normal_boot" and "secure_boot".  The secure_boot command
- *   is referenced when we override the boot command with the FDT.
+ * - We define "non_verified_boot", which is the normal boot command.
+ * - At the moment, we define "secure_boot".  This is specified in the FDT
+ *   as the boot command when we've got secure boot turned on.  TODO(dianders):
+ *   Just have the FDT run vboot_twostop directly.
  */
 
 #define CONFIG_EXTRA_ENV_SETTINGS_COMMON \
@@ -406,7 +416,6 @@
 		"run mmc1_boot; " \
 		"run mmc0_boot\0" \
 	"secure_boot=" \
-		"run regen_all; " \
 		"vboot_twostop\0"
 
 #define CONFIG_BOOTCOMMAND "run non_verified_boot"
