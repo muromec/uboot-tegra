@@ -201,22 +201,42 @@ static VbError_t call_VbSelectFirmware(VbCommonParams *cparams,
 	return ret;
 }
 
-static int set_fwid_value(vb_global_t *global,
-			  firmware_storage_t *file,
-			  struct fdt_twostop_fmap *fmap,
-			  uint32_t selected_firmware)
+static void fill_boot_status(vb_global_t *global,
+			     uint32_t selected_firmware)
+{
+	crossystem_data_t *cdata = &global->cdata_blob;
+	VbSharedDataHeader *shared = (VbSharedDataHeader *)cdata->vbshared_data;
+	/* mainfw_type of non-recovery boot depends on dev switch */
+	int mainfw_type = cdata->developer_sw ? DEVELOPER_TYPE
+					      : NORMAL_TYPE;
+
+	if (selected_firmware == VB_SELECT_FIRMWARE_RECOVERY) {
+		crossystem_data_set_recovery_reason(cdata,
+				shared->recovery_reason);
+		mainfw_type = RECOVERY_TYPE;
+	}
+
+	crossystem_data_set_active_main_firmware(cdata, selected_firmware,
+						 mainfw_type);
+}
+
+static int fill_crossystem_data(vb_global_t *global,
+				firmware_storage_t *file,
+				struct fdt_twostop_fmap *fmap,
+				uint32_t selected_firmware)
 {
 	crossystem_data_t *cdata = &global->cdata_blob;
 	char fwid[ID_LEN];
 	uint32_t fwid_offset;
 
+	fill_boot_status(global, selected_firmware);
+
+	/* Fills FWID */
 	switch (selected_firmware) {
 	case VB_SELECT_FIRMWARE_RECOVERY:
 	case VB_SELECT_FIRMWARE_READONLY:
 		crossystem_data_set_fwid(cdata, (char *)cdata->frid);
-		VBDEBUG(PREFIX "Set FWID as %s (same as RO)\n",
-				(char *)cdata->fwid);
-		return 0;
+		goto done;
 
 	case VB_SELECT_FIRMWARE_A:
 		fwid_offset = fmap->readwrite_a.firmware_id.offset;
@@ -231,13 +251,13 @@ static int set_fwid_value(vb_global_t *global,
 	}
 
 	if (file->read(file, fwid_offset, ID_LEN, fwid)) {
-		VBDEBUG(PREFIX "Failed to read FWID!\n");
+		VBDEBUG(PREFIX "Failed to read FWID from firmware!\n");
 		return 1;
 	}
-
 	crossystem_data_set_fwid(cdata, fwid);
-	VBDEBUG(PREFIX "Set FWID as %s\n", (char *)cdata->fwid);
 
+done:
+	crossystem_data_dump(cdata);
 	return 0;
 }
 
@@ -289,8 +309,9 @@ void bootstub_entry(void)
 				ret);
 	release_fparams(&fparams);
 
-	if (set_fwid_value(global, &file, &fmap, fparams.selected_firmware))
-		VbExError(PREFIX "Failed to set FWID!\n");
+	if (fill_crossystem_data(global, &file, &fmap,
+				 fparams.selected_firmware))
+		VbExError(PREFIX "Failed to fill crossystem data!\n");
 
 	if (file.close(&file))
 		VbExError(PREFIX "Failed to close firmware device!\n");
