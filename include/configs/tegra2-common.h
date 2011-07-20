@@ -213,7 +213,6 @@
  * Args:
  *   linuxconsole - console passed to the kernel
  *   lp0_args: ?
- *   videospec: ?
  *   platform_extras: Platform-specific bootargs.
  *   dev_extras: Placeholder space for developers to put their own boot args.
  *   extra_bootargs: Filled in by update_firmware_vars.py script in some cases.
@@ -221,7 +220,6 @@
 #define CONFIG_REGEN_ALL_SETTINGS \
 	"linuxconsole=ttyS0,115200n8\0" \
 	"lp0_args=" TEGRA_LP0_VEC "\0" \
-	"videospec=tegrafb\0" \
 	"platform_extras=" TEGRA2_SYSMEM "\0" \
 	"dev_extras=\0" \
 	"extra_bootargs=\0" \
@@ -231,7 +229,6 @@
 		"setenv bootargs " \
 			"console=${linuxconsole} " \
 			"${lp0_args} "\
-			"video=${videospec} " \
 			"${platform_extras} " \
 			"${dev_extras} " \
 			"${extra_bootargs} " \
