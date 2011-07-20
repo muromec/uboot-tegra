@@ -14,7 +14,6 @@
 #include <libfdt.h>
 #include <chromeos/common.h>
 #include <chromeos/crossystem_data.h>
-#include <chromeos/vboot_nvstorage_helper.h> /* for NVCONTEXT_LBA */
 #include <linux/string.h>
 
 /* This is used to keep u-boot and kernel in sync */
@@ -77,7 +76,7 @@ int crossystem_data_init(crossystem_data_t *cdata, char *frid,
 
 	cdata->fmap_base = fmap_data;
 
-	cdata->nvcxt_lba = NVCONTEXT_LBA;
+	cdata->nvcxt_lba = CHROMEOS_VBNVCONTEXT_LBA;
 
 	memcpy(cdata->nvcxt_cache, nvcxt_raw, VBNV_BLOCK_SIZE);
 

@@ -21,6 +21,9 @@
 #define CONFIG_CHROMEOS_KERNEL_LOADADDR	0x00100000
 #define CONFIG_CHROMEOS_KERNEL_BUFSIZE	0x00800000
 
+/* store the VbNvContext in the first block of the disk */
+#define CHROMEOS_VBNVCONTEXT_LBA	0
+
 /* graphics display */
 #define CONFIG_LCD_BMP_RLE8
 #define CONFIG_LZMA

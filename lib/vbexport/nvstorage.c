@@ -23,9 +23,6 @@
  * cookies in eMMC device where we are certain that kernel can access.
  */
 
-/* Store the cookies in the first LBA of the internal disk. */
-#define NVCXT_LBA	0
-
 /*
  * Gets the first internal disk and caches the result in a static variable.
  * Returns 0 for success, non-zero for failure.
@@ -63,7 +60,8 @@ static int get_nvcxt_block_of_disk(const VbDiskInfo *disk,
 
 	block_buf = VbExMalloc(disk->bytes_per_lba);
 
-	if (VbExDiskRead(disk->handle, NVCXT_LBA, 1, block_buf)) {
+	if (VbExDiskRead(disk->handle,
+				CHROMEOS_VBNVCONTEXT_LBA, 1, block_buf)) {
 		VBDEBUG(PREFIX "Failed to read internal disk!\n");
 		VbExFree(block_buf);
 		return 1;
@@ -103,7 +101,8 @@ VbError_t VbExNvStorageWrite(const uint8_t* buf)
 
 	memcpy(block_buf, buf, VBNV_BLOCK_SIZE);
 
-	if (VbExDiskWrite(internal_disk->handle, NVCXT_LBA, 1, block_buf)) {
+	if (VbExDiskWrite(internal_disk->handle,
+				CHROMEOS_VBNVCONTEXT_LBA, 1, block_buf)) {
 		VBDEBUG(PREFIX "Failed to write internal disk!\n");
 		VbExFree(block_buf);
 		return 1;
