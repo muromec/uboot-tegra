@@ -23,18 +23,23 @@
 
 typedef struct {
 	/*
-	 * These fields are the offsets of firmware data sections,
-	 * from beginning of firmware storage device.
+	 * The offset of the firmware data section from the beginning of
+	 * the firmware storage device.
 	 */
 	off_t offset;
 
 	/*
-	 * These fields are the sizes of firmware data sections.
+	 * The size of the signed firmware data section, which should be
+	 * exactly the same size as what is described by the vblock.
+	 *
+	 * If this size is larger than what was signed (the vblock value),
+	 * then VbExHashFirmwareBody() will hash the extra data and compute
+	 * a different hash value that does not match.
 	 */
 	size_t size;
 
 	/*
-	 * These pointers will point to firmware data bodies loaded by
+	 * Pointer to the firmware data section loaded by
 	 * VbExHashFirmwareBody().
 	 */
 	uint8_t *buffer;
