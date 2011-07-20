@@ -119,19 +119,20 @@ VbError_t VbExDiskGetInfo(VbDiskInfo** infos_ptr, uint32_t* count_ptr,
 	if (!(disk_flags & VB_DISK_FLAG_REMOVABLE))
 		iterators[1] = NULL;
 
+	/*
+	 * If too many storage devices registered, we return as many disk infos
+	 * as possible.
+	 */
 	for (func_index = 0;
 	     count < max_count && (iter = iterators[func_index]);
 	     func_index++) {
 		if (iter == iterate_usb_device)
 			init_usb_storage();
 
-		/*
-		 * If too many storage devices registered, we return as many
-		 * disk infos as possible.
-		 */
-		for (i = 0; count < max_count && (dev = iter(&i)); count++) {
-			flags = get_dev_flags(dev);
+		i = 0;
+		while (count < max_count && (dev = iter(&i))) {
 			/* Skip this entry if the flags are not matched. */
+			flags = get_dev_flags(dev);
 			if (!(flags & disk_flags))
 				continue;
 
@@ -140,6 +141,7 @@ VbError_t VbExDiskGetInfo(VbDiskInfo** infos_ptr, uint32_t* count_ptr,
 			infos[count].lba_count = dev->lba;
 			infos[count].flags = flags;
 			infos[count].name = get_dev_name(dev);
+			count++;
 		}
 	}
 

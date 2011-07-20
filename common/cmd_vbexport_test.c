@@ -185,16 +185,22 @@ static int do_vbexport_test_diskinfo_flags(uint32_t flags)
 	} else {
 		VbExDebug("handle    byte/lba  lba_count  f  name\n");
 		for (i = 0; i < count; i++) {
-			VbExDebug("%08lx  %-9llu %-10llu %-2lu %s\n",
+			VbExDebug("%08lx  %-9llu %-10llu %-2lu %s",
 					info[i].handle,
 					info[i].bytes_per_lba,
 					info[i].lba_count,
 					info[i].flags,
 					info[i].name);
+
+			if (!(flags & info[i].flags)) {
+				VbExDebug("    INCORRECT: flag mismatched\n");
+				ret = 1;
+			} else
+				VbExDebug("\n");
 		}
 	}
 
-	return VbExDiskFreeInfo(info, NULL);
+	return VbExDiskFreeInfo(info, NULL) || ret;
 }
 
 static int do_vbexport_test_diskinfo(
