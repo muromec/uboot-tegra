@@ -88,7 +88,8 @@ VbError_t VbExDisplayScreen(uint32_t screen_type)
 	 */
 	switch (screen_type) {
 		case VB_SCREEN_BLANK:
-			print_on_center("");
+			/* clear the lcd screen */
+			lcd_clear();
 			break;
 		case VB_SCREEN_DEVELOPER_WARNING:
 			print_on_center("developer mode warning");
