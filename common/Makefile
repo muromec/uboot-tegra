@@ -74,7 +74,6 @@ COBJS-$(CONFIG_CMD_BOOTLDR) += cmd_bootldr.o
 COBJS-$(CONFIG_CMD_CACHE) += cmd_cache.o
 COBJS-$(CONFIG_CMD_CONSOLE) += cmd_console.o
 COBJS-$(CONFIG_CMD_CPLBINFO) += cmd_cplbinfo.o
-COBJS-$(CONFIG_CMD_CROS_ONESTOP_FIRMWARE) += cmd_cros_onestop_firmware.o
 COBJS-$(CONFIG_CMD_VBEXPORT_TEST) += cmd_vbexport_test.o
 COBJS-$(CONFIG_CMD_VBOOT_BOOTSTUB) += cmd_vboot_bootstub.o
 COBJS-$(CONFIG_CMD_VBOOT_MAIN) += cmd_vboot_main.o
