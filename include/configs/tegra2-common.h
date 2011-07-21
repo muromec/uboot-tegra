@@ -380,10 +380,10 @@
  * A few notes:
  * - Right now, we can only boot from one USB device.  Need to fix this once
  *   usb works better.
- * - We define "non_verified_boot", which is the normal boot command.
- * - At the moment, we define "secure_boot".  This is specified in the FDT
- *   as the boot command when we've got secure boot turned on.  TODO(dianders):
- *   Just have the FDT run vboot_twostop directly.
+ * - We define "non_verified_boot", which is the normal boot command unless
+ *   it is overridden in the FDT.
+ * - When we're running securely, the FDT will specify to call vboot_twostop
+ *   directly.
  */
 
 #define CONFIG_EXTRA_ENV_SETTINGS_COMMON \
@@ -414,9 +414,7 @@
 		"run usb_boot; " \
 		\
 		"run mmc1_boot; " \
-		"run mmc0_boot\0" \
-	"secure_boot=" \
-		"vboot_twostop\0"
+		"run mmc0_boot\0"
 
 #define CONFIG_BOOTCOMMAND "run non_verified_boot"
 
