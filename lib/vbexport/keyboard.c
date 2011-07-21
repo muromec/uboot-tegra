@@ -19,27 +19,42 @@
 
 uint32_t VbExKeyboardRead(void)
 {
-	int c;
+	int c = 0;
 
+	/* No input available. */
 	if (!tstc())
-		return 0;
+		goto out;
 
-	c = getc();
+	/* Read a non-Escape character or a standalone Escape character. */
+	if ((c = getc()) != CSI_0 || !tstc())
+		goto out;
 
-	/* Special handle for up/down/left/right arrow keys. */
-	if (c == CSI_0) {
-		if (getc() == CSI_1) {
-			c = getc();
-			switch (c) {
-				case 'A': return VB_KEY_UP;
-				case 'B': return VB_KEY_DOWN;
-				case 'C': return VB_KEY_RIGHT;
-				case 'D': return VB_KEY_LEFT;
-			}
-		}
-		/* Filter out any speical key we don't recognize. */
-		return 0;
+	/* Filter out non- Escape-[ sequence. */
+	if (getc() != CSI_1) {
+		c = 0;
+		goto out;
 	}
 
+	/* Special values for arrow up/down/left/right. */
+	switch (getc()) {
+	case 'A':
+		c = VB_KEY_UP;
+		break;
+	case 'B':
+		c = VB_KEY_DOWN;
+		break;
+	case 'C':
+		c = VB_KEY_RIGHT;
+		break;
+	case 'D':
+		c = VB_KEY_LEFT;
+		break;
+	default:
+		/* Filter out speical keys that we do not recognize. */
+		c = 0;
+		break;
+	}
+
+out:
 	return c;
 }
