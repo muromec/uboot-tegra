@@ -334,11 +334,11 @@
 	\
 	"tftp_setup=" \
 		"setenv tftpkernelpath " \
-			"/tftpboot/uImage-${user}-${board}-${serial#}; " \
+			"/tftpboot/vmlinux.uimg; " \
 		"setenv tftprootpath " \
-			"/tftpboot/initrd-${user}-${board}-${serial#}; " \
+			"/tftpboot/initrd.uimg; " \
 		"setenv rootpath " \
-			"/export/nfsroot-${user}-${board}-${serial#}; " \
+			"/export/nfsroot; " \
 		"setenv autoload n\0" \
 	"initrdroot_boot=" \
 		"run tftp_setup; " \
