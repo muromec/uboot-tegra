@@ -28,7 +28,7 @@
 #include "tegra2-common.h"
 
 /* High-level configuration options */
-#define TEGRA2_SYSMEM		"nvmem=128M@384M mem=1024M@0M"
+#define TEGRA2_SYSMEM		"nvmem=128M@384M mem=1024M@0M vmalloc=256M"
 #define V_PROMPT		"Tegra2 (Ventana) # "
 #define CONFIG_TEGRA2_BOARD_STRING	"NVIDIA Ventana"
 
@@ -100,6 +100,10 @@
 		"run mmc_boot\0" \
 	\
 	"non_verified_boot=" \
+		"setenv dev_extras video=tegrafb console=tty0; "\
+		"mmc rescan 0; " \
+		"mmc list; " \
+		"mmc part 0; " \
 		"usb start; " \
 		"run usb_boot; " \
 	\
