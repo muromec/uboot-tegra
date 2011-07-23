@@ -106,6 +106,8 @@
 		"mmc part 0; " \
 		"usb start; " \
 		"run usb_boot; " \
+		"mmc read 0 ${loadaddr} 0x1c00 0x2800 ; "\
+		"bootm ${loadaddr}; " \
 	\
 	"board=ventanta\0"
 
