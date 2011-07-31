@@ -101,15 +101,16 @@
 	\
 	"non_verified_boot=" \
 		"setenv dev_extras video=tegrafb console=tty0; "\
-		"mmc rescan 0; " \
-		"mmc list; " \
-		"mmc part 0; " \
 		"usb start; " \
 		"run usb_boot; " \
+		"run mmc0_boot; " \
+		"setenv bootdev_bootargs " \
 		"mmc read 0 ${loadaddr} 0x1c00 0x2800 ; "\
 		"bootm ${loadaddr}; " \
 	\
 	"board=ventanta\0"
 
-
+/*			"root=/dev/mmcblk0p2 rootwait ro "\ */
+/*
+			"tegrapart=boot:700:a00:800,boot2:1100:1000:800,mbr:2100:200:800 ;" \ */
 #endif /* __CONFIG_H */
