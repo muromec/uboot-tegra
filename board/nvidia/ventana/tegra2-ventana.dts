@@ -10,7 +10,7 @@
 	config {
 		silent_console = <0>;
 		odmdata = <0x300d8011>;
-		machine-arch-id = <3403>;
+		machine-arch-id = <3640>;
 	};
 
 	aliases {
