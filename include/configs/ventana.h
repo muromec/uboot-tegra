@@ -40,7 +40,7 @@
 					"stderr=serial,lcd\0"
 
 
-#define CONFIG_MACH_TYPE		3403
+#define CONFIG_MACH_TYPE		2927
 #define CONFIG_SYS_BOARD_ODMDATA	0x300d8011 /* lp1, 1GB */
 
 /* SD/MMC */
@@ -82,8 +82,6 @@
 	"usb_boot=setenv devtype usb; " \
 		"setenv devnum 0; " \
 		"setenv devname sda; " \
-		"setenv rootpart 1; " \
-		"setenv script_part 4; "\
 		"run run_disk_boot_script;" \
 		"run ext2_boot\0" \
 	\
@@ -101,6 +99,7 @@
 	\
 	"non_verified_boot=" \
 		"setenv dev_extras video=tegrafb console=tty0; "\
+		"setenv script_part 4; "\
 		"usb start; " \
 		"run usb_boot; " \
 		"run mmc0_boot; " \
