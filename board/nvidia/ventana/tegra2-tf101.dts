@@ -4,7 +4,7 @@
 /include/ "../../../board/nvidia/seaboard/tegra250.dtsi"
 
 / {
-	model = "NVIDIA Ventanta";
+	model = "Asus EEEPad TF101";
 	compatible = "nvidia,ventanta", "nvidia,tegra250";
 
 	config {
